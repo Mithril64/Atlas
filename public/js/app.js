@@ -13,15 +13,43 @@ const UIController = {
     badge: document.getElementById('node-badge'),
     title: document.getElementById('node-title'),
     idDisplay: document.getElementById('node-id'),
+    
     mathImage: document.getElementById('node-math-image'),
     placeholder: document.getElementById('node-placeholder'),
+    btnCopy: document.getElementById('btn-copy'),
+    btnDownload: document.getElementById('btn-download'),
+
+    currentNode: null,
 
     init() {
         this.closeBtn.addEventListener('click', () => this.close());
+        
+        this.btnCopy.addEventListener('click', () => {
+            if (this.currentNode && this.currentNode.body) {
+                navigator.clipboard.writeText(this.currentNode.body).then(() => {
+                    const originalText = this.btnCopy.textContent;
+                    this.btnCopy.textContent = "Copied!";
+                    setTimeout(() => this.btnCopy.textContent = originalText, 2000);
+                });
+            }
+        });
+
+        this.btnDownload.addEventListener('click', () => {
+            if (this.currentNode && !this.currentNode.isGhost) {
+                // Create a temporary link to force a download of the PDF
+                const link = document.createElement('a');
+                link.href = `./nodes/${this.currentNode.id}.pdf`;
+                link.download = `${this.currentNode.id}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        });
     },
 
     open(node) {
-        // 1. Populate the Metadata
+        this.currentNode = node; // Save state for buttons
+        
         this.badge.textContent = node.type;
         this.badge.style.backgroundColor = typeColors[node.type] || '#6272a4';
         this.idDisplay.textContent = node.id;
@@ -29,34 +57,36 @@ const UIController = {
         const cleanName = node.id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
         this.title.textContent = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
 
-        // 2. Load the Content
         if (node.isGhost) {
-            // It's a missing dependency
             this.mathImage.style.display = 'none';
             this.placeholder.style.display = 'block';
-            this.placeholder.textContent = "This node hasn't been written yet. Create the corresponding Typst block to render its math!";
-            this.placeholder.style.color = '#ffb86c'; // Dracula Orange for warnings
-            this.placeholder.style.fontStyle = 'italic';
+            this.placeholder.textContent = "This node hasn't been written yet.";
+            this.placeholder.style.color = '#ffb86c';
+            
+            // Hide action buttons for ghosts
+            this.btnCopy.style.display = 'none';
+            this.btnDownload.style.display = 'none';
         } else {
-            // It's a real node with a compiled SVG
             this.placeholder.style.display = 'none';
             this.mathImage.style.display = 'block';
             
-            // Add a timestamp query parameter to bypass browser caching during active development
+            // Show action buttons for real nodes
+            this.btnCopy.style.display = 'block';
+            this.btnDownload.style.display = 'block';
+            
             const cacheBuster = new Date().getTime();
-            this.mathImage.src = `./nodes/${node.id}.svg?t=${cacheBuster}`;
+            this.mathImage.src = `./nodes/${node.id}.svg?t=${cacheBuster}`; 
         }
 
-        // 3. Slide the panel in
         this.panel.classList.add('open');
     },
 
     close() {
         this.panel.classList.remove('open');
-        // Clear the image source after closing to prevent old images from flashing on next open
         setTimeout(() => {
             this.mathImage.src = '';
-        }, 300); // Wait for the slide-out CSS transition to finish (0.3s)
+            this.currentNode = null;
+        }, 300); 
     }
 };
 
@@ -94,8 +124,12 @@ async function initGraph() {
         const response = await fetch('./json/graph.json');
         const data = await response.json();
 
-        const nodes = data.map(node => ({ id: node.id, type: node.node_type }));
-        
+        const nodes = data.map(node => ({ 
+            id: node.id, 
+            type: node.node_type,
+            body: node.body 
+        }));
+
         const validNodeIds = new Set(nodes.map(n => n.id));
 
         const links = [];

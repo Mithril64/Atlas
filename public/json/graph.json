@@ -5,7 +5,8 @@
     "deps": [
       "def-bounded",
       "thm-monotone"
-    ]
+    ],
+    "body": "Every bounded sequence has a convergent subsequence."
   },
   {
     "id": "def-group",
@@ -13,11 +14,13 @@
     "deps": [
       "def-set",
       "def-binary-operation"
-    ]
+    ],
+    "body": "A group is a set $G$ equipped with a binary operation $*$ that satisfies closure, associativity, identity, and invertibility."
   },
   {
     "id": "ax-group-associativity",
     "node_type": "axiom",
-    "deps": []
+    "deps": [],
+    "body": "For all $a, b, c in G$, the equation $(a * b) * c = a * (b * c)$ holds valid."
   }
 ]

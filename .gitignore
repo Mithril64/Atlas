@@ -28,3 +28,10 @@ yarn-error.log
 
 .DS_Store
 Thumbs.db
+
+# =========================
+# 5. Local Typst Compilation (and debug images)
+# =========================
+*.pdf
+*.png
+*.svg

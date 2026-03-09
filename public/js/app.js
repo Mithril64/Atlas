@@ -13,12 +13,15 @@ const UIController = {
     badge: document.getElementById('node-badge'),
     title: document.getElementById('node-title'),
     idDisplay: document.getElementById('node-id'),
+    mathImage: document.getElementById('node-math-image'),
+    placeholder: document.getElementById('node-placeholder'),
 
     init() {
         this.closeBtn.addEventListener('click', () => this.close());
     },
 
     open(node) {
+        // 1. Populate the Metadata
         this.badge.textContent = node.type;
         this.badge.style.backgroundColor = typeColors[node.type] || '#6272a4';
         this.idDisplay.textContent = node.id;
@@ -26,11 +29,34 @@ const UIController = {
         const cleanName = node.id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
         this.title.textContent = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
 
+        // 2. Load the Content
+        if (node.isGhost) {
+            // It's a missing dependency
+            this.mathImage.style.display = 'none';
+            this.placeholder.style.display = 'block';
+            this.placeholder.textContent = "This node hasn't been written yet. Create the corresponding Typst block to render its math!";
+            this.placeholder.style.color = '#ffb86c'; // Dracula Orange for warnings
+            this.placeholder.style.fontStyle = 'italic';
+        } else {
+            // It's a real node with a compiled SVG
+            this.placeholder.style.display = 'none';
+            this.mathImage.style.display = 'block';
+            
+            // Add a timestamp query parameter to bypass browser caching during active development
+            const cacheBuster = new Date().getTime();
+            this.mathImage.src = `./nodes/${node.id}.svg?t=${cacheBuster}`;
+        }
+
+        // 3. Slide the panel in
         this.panel.classList.add('open');
     },
 
     close() {
         this.panel.classList.remove('open');
+        // Clear the image source after closing to prevent old images from flashing on next open
+        setTimeout(() => {
+            this.mathImage.src = '';
+        }, 300); // Wait for the slide-out CSS transition to finish (0.3s)
     }
 };
 

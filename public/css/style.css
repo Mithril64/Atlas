@@ -81,3 +81,17 @@
 #node-body p {
     color: inherit;
 }
+
+.action-btn {
+    background-color: #44475a;
+    color: #f8f8f2;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background-color 0.2s;
+}
+.action-btn:hover {
+    background-color: #6272a4;
+}

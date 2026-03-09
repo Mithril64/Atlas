@@ -13,7 +13,6 @@
 </head>
 <body>
     <div id="graph-container"></div>
-
     <aside id="side-panel">
         <header id="panel-header">
             <span id="node-badge">Type</span>
@@ -22,7 +21,12 @@
         
         <div id="panel-content">
             <h2 id="node-title">Node Title</h2>
-            <p class="meta-id">ID: <span id="node-id"></span></p>
+            <p class="meta-id" style="border-bottom: none; padding-bottom: 5px;">ID: <span id="node-id"></span></p>
+            
+            <div id="panel-actions" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #44475a; display: flex; gap: 10px;">
+                <button id="btn-copy" class="action-btn">Copy Typst</button>
+                <button id="btn-download" class="action-btn">Download PDF</button>
+            </div>
             
             <div id="node-body">
                 <img id="node-math-image" src="" alt="Math content" style="max-width: 100%; height: auto; display: none;">

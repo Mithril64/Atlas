@@ -9,7 +9,6 @@ struct MathNode {
     id: String,
     node_type: String, 
     deps: Vec<String>,
-    #[serde(skip)] 
     body: String, 
 }
 
@@ -122,43 +121,54 @@ fn main() {
     let nodes_dir = Path::new("../public/nodes");
     fs::create_dir_all(nodes_dir).expect("Failed to create public/nodes directory");
 
-    for node in &all_nodes {
-        // If the file is just an empty block like #theorem(id: "test")[], skip it
+for node in &all_nodes {
         if node.body.is_empty() { 
             continue; 
         } 
 
-        // 1. Create a temporary Typst file formatted specifically for the Web UI
-        let temp_content = format!(
+        // --- 1. Compile the Web SVG (Dark Mode, Transparent Background) ---
+        let svg_content = format!(
             "#import \"../math/schema/math-graph.typ\": *\n\
              #set page(width: 400pt, height: auto, margin: 10pt, fill: none)\n\
              #set text(fill: rgb(\"f8f8f2\"), size: 14pt)\n\n\
              {}", 
             node.body
         );
-        let temp_file = format!(".temp_{}.typ", node.id);
-        fs::write(&temp_file, &temp_content).expect("Failed to write temp file");
+        let temp_svg = format!(".temp_svg_{}.typ", node.id);
+        fs::write(&temp_svg, &svg_content).expect("Failed to write temp SVG file");
 
-        // 2. Command the Typst CLI to compile it to SVG instead of HTML
-        let out_svg = format!("../public/nodes/{}.svg", node.id); // <--- Changed to .svg
-        let status = Command::new("typst")
-            .args([
-                "compile", 
-                "--root", "..", // Keep the root permission!
-                &temp_file, 
-                &out_svg
-            ]) // <--- Removed the experimental --features html flag
+        let out_svg = format!("../public/nodes/{}.svg", node.id);
+        Command::new("typst")
+            .args(["compile", "--root", "..", &temp_svg, &out_svg])
             .status()
-            .expect("Failed to execute Typst CLI. Is it installed and in your PATH?");
+            .expect("Failed to execute Typst CLI for SVG.");
+            
+        let _ = fs::remove_file(&temp_svg);
 
-        if status.success() {
-            println!("  ↳ Compiled: {}.svg", node.id);
+        // --- 2. Compile the Downloadable PDF (Light Mode, Clean Document) ---
+        let pdf_content = format!(
+            "#import \"../math/schema/math-graph.typ\": *\n\
+             #set page(width: auto, height: auto, margin: 20pt, fill: rgb(\"ffffff\"))\n\
+             #set text(fill: rgb(\"000000\"), size: 12pt)\n\n\
+             {}", 
+            node.body
+        );
+        let temp_pdf = format!(".temp_pdf_{}.typ", node.id);
+        fs::write(&temp_pdf, &pdf_content).expect("Failed to write temp PDF file");
+
+        let out_pdf = format!("../public/nodes/{}.pdf", node.id);
+        let pdf_status = Command::new("typst")
+            .args(["compile", "--root", "..", &temp_pdf, &out_pdf])
+            .status()
+            .expect("Failed to execute Typst CLI for PDF.");
+
+        if pdf_status.success() {
+            println!("Compiled SVG & PDF: {}", node.id);
         } else {
-            eprintln!("  ❌ Failed to compile: {}", node.id);
+            eprintln!("Failed to compile PDF for: {}", node.id);
         }
-
-        // 3. Clean up the temporary file
-        let _ = fs::remove_file(&temp_file);
+        
+        let _ = fs::remove_file(&temp_pdf);
     }
 
     println!("Atlas Compilation Successful!");

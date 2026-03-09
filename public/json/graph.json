@@ -1,0 +1,23 @@
+[
+  {
+    "id": "thm-bolzano",
+    "node_type": "theorem",
+    "deps": [
+      "def-bounded",
+      "thm-monotone"
+    ]
+  },
+  {
+    "id": "def-group",
+    "node_type": "definition",
+    "deps": [
+      "def-set",
+      "def-binary-operation"
+    ]
+  },
+  {
+    "id": "ax-group-associativity",
+    "node_type": "axiom",
+    "deps": []
+  }
+]

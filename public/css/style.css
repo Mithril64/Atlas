@@ -1,0 +1,83 @@
+/* --- Side Panel UI --- */
+#side-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 50vw;
+    height: 100vh;
+    background-color: #282a36; 
+    border-left: 1px solid #44475a;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    
+    transform: translateX(100%); 
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    
+    display: flex;
+    flex-direction: column;
+}
+
+#side-panel.open {
+    transform: translateX(0);
+}
+
+#panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 20px 10px;
+}
+
+#node-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #282a36;
+}
+
+#close-panel-btn {
+    background: none;
+    border: none;
+    color: #f8f8f2;
+    font-size: 2rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 10px;
+    transition: color 0.2s ease;
+}
+
+#close-panel-btn:hover {
+    color: #ff5555;
+}
+
+#panel-content {
+    padding: 0 20px 20px;
+    overflow-y: auto;
+}
+
+#node-title {
+    margin: 0 0 10px 0;
+    font-size: 1.5rem;
+    color: #f8f8f2;
+}
+
+.meta-id {
+    color: #6272a4;
+    font-family: monospace;
+    font-size: 0.9rem;
+    margin-top: 0;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #44475a;
+}
+
+#node-body {
+    color: #f8f8f2;
+    line-height: 1.6;
+    font-size: 1.1rem;
+}
+
+#node-body p {
+    color: inherit;
+}

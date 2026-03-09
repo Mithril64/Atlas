@@ -8,10 +8,26 @@
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://unpkg.com/force-graph"></script>
     
-    <link rel="stylesheet" href="style.css">
-    <script src="app.js" defer></script>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/app.js" defer></script>
 </head>
 <body>
     <div id="graph-container"></div>
+
+    <aside id="side-panel">
+        <header id="panel-header">
+            <span id="node-badge">Type</span>
+            <button id="close-panel-btn" aria-label="Close panel">&times;</button>
+        </header>
+        
+        <div id="panel-content">
+            <h2 id="node-title">Node Title</h2>
+            <p class="meta-id">ID: <span id="node-id"></span></p>
+            
+            <div id="node-body">
+                <p>Mathematical details and intuition will load here...</p>
+            </div>
+        </div>
+    </aside>
 </body>
 </html>

@@ -1,3 +1,19 @@
+/* --- Global Reset for Atlas --- */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background-color: #282a36;
+    font-family: sans-serif;
+}
+
+#graph-container {
+    width: 100%;
+    height: 100%;
+}
+
 /* --- Side Panel UI --- */
 #side-panel {
     position: fixed;
@@ -54,7 +70,7 @@
 
 #panel-content {
     padding: 0 20px 20px;
-    overflow-y: auto;
+    overflow-y: auto; /* Allows the inside of the panel to scroll */
 }
 
 #node-title {
@@ -73,7 +89,7 @@
 }
 
 #node-math-image {
-    width: 100%
+    width: 100%; /* Semicolon fixed for Chrome */
     max-width: 1200px;
     height: auto;
     display: block;
@@ -100,6 +116,37 @@
     font-size: 0.85rem;
     transition: background-color 0.2s;
 }
+
 .action-btn:hover {
     background-color: #6272a4;
+}
+
+/* --- Global Floating Footer --- */
+#global-footer {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 500;
+}
+
+#contribute-btn {
+    display: inline-block;
+    padding: 8px 18px;
+    background-color: rgba(40, 42, 54, 0.7);
+    color: #6272a4;
+    text-decoration: none;
+    font-family: sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: 1px solid #44475a;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+}
+
+#contribute-btn:hover {
+    color: #8be9fd;
+    border-color: #8be9fd;
+    background-color: rgba(40, 42, 54, 1);
+    box-shadow: 0 0 12px rgba(139, 233, 253, 0.2);
 }

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atlas Contributor Portal</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/submit.css">
+    <script src="js/submit.js" defer></script>
+</head>
+<body>
+    <div class="submit-container">
+        <div class="submit-header">
+            <h1>Atlas Contributor Portal</h1>
+            <p>Submit new mathematical definitions, theorems, and proofs to the graph</p>
+        </div>
+
+        <div class="content-wrapper">
+            <!-- Left Panel: Format Instructions -->
+            <div class="section">
+                <h2>Required Format</h2>
+                
+                <div class="instructions">
+                    <strong>Step 1:</strong> Write your content in <strong>Typst</strong> markdown<br>
+                    <strong>Step 2:</strong> Add <strong>metadata comments</strong> at the top<br>
+                    <strong>Step 3:</strong> Upload the file and we'll validate it
+                </div>
+
+                <p style="color: #b5b5b5; margin: 20px 0;">Your submission must include these three metadata lines at the beginning:</p>
+
+                <div class="format-example">
+                	<pre>
+  <span class="comment">// id: thm-my-theorem</span>
+  <span class="comment">// type: theorem</span>
+  <span class="comment">// deps: [def-group, ax-associativity]</span>
+  <span class="comment">---</span>
+
+  <span class="keyword">Let</span> $G$ be a group. Then...
+			</pre>
+                </div>
+
+                <div class="help-section">
+                    <h3>Metadata Reference</h3>
+                    <ol>
+                        <li>
+				<strong>Id:</strong> Unique identifier (e.g., <code>thm-bolzano-weierstrass</code>)
+			</li>
+                        <li>
+				<strong>Type:</strong> One of: <code>theorem</code>, <code>lemma</code>, <code>definition</code>, <code>axiom</code>, <code>intuition</code>, <code>proof</code>
+
+			</li>
+                        <li>
+				<strong>Deps:</strong> Array of IDs this node depends on (can be empty: <code>[]</code>)
+			</li>
+                    </ol>
+                </div>
+
+                <div class="instructions" style="margin-top: 20px;">
+                    <strong>Valid ID formats:</strong><br>
+                    <code>thm-fermat-last</code>, <code>def-prime-number</code>, <code>ax-choice</code>, <code>lem-triangle-inequality</code>
+                </div>
+            </div>
+
+            <!-- Right Panel: Upload Interface -->
+            <div class="section">
+                <h2>Upload Your Submission</h2>
+
+                <div class="drop-zone" id="drop-zone">
+                    <div class="drop-zone-icon">📎</div>
+                    <div class="drop-zone-text">Drop your .typ file here</div>
+                    <div class="drop-zone-subtext">or click to browse</div>
+                </div>
+
+                <input type="file" id="typ-file" accept=".typ" />
+
+                <div class="file-info" id="file-info">
+                    <p><span class="label">File:</span> <span id="file-name"></span></p>
+                    <p><span class="label">Size:</span> <span id="file-size"></span></p>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-submit" id="btn-submit" disabled>Push to Graph</button>
+                    <button class="btn-clear" id="btn-clear">Clear</button>
+                </div>
+
+                <div class="status-message" id="status-message"></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

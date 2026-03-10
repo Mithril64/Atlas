@@ -1,0 +1,291 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #282a36;
+    color: #f8f8f2;
+    margin: 0;
+    padding: 20px;
+}
+
+.submit-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.submit-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.submit-header h1 {
+    font-size: 2.5em;
+    margin: 0 0 10px 0;
+    color: #bd93f9;
+}
+
+.submit-header p {
+    color: #b5b5b5;
+    font-size: 1.1em;
+    margin: 0;
+}
+
+.content-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+.section {
+    background: #323544;
+    border-radius: 8px;
+    padding: 25px;
+    border: 1px solid #44475a;
+}
+
+.section h2 {
+    color: #8be9fd;
+    margin-top: 0;
+    font-size: 1.4em;
+    border-bottom: 2px solid #44475a;
+    padding-bottom: 15px;
+}
+
+.instructions {
+    background: #1e1f29;
+    border-left: 4px solid #ffb86c;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    font-size: 0.95em;
+    line-height: 1.6;
+}
+
+.instructions strong {
+    color: #ffb86c;
+}
+
+.format-example {
+    background: #1e1f29;
+    padding: 10px 0;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.9em;
+    line-height: 1.5;
+    margin-bottom: 20px;
+    border: 1px solid #44475a;
+}
+
+.format-example pre {
+    margin: 0;
+    color: #8be9fd;
+}
+
+.format-example .comment {
+    color: #6272a4;
+}
+
+.format-example .keyword {
+    color: #ff79c6;
+}
+
+.drop-zone {
+    border: 3px dashed #8be9fd;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #1e1f29;
+    margin-bottom: 20px;
+}
+
+.drop-zone:hover {
+    background: #2a2c38;
+    border-color: #50fa7b;
+}
+
+.drop-zone.active {
+    background: #2a2c38;
+    border-color: #50fa7b;
+    box-shadow: 0 0 10px rgba(80, 250, 123, 0.3);
+}
+
+.drop-zone-icon {
+    font-size: 3em;
+    margin-bottom: 15px;
+}
+
+.drop-zone-text {
+    color: #8be9fd;
+    font-weight: bold;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+.drop-zone-subtext {
+    color: #b5b5b5;
+    font-size: 0.9em;
+}
+
+#typ-file {
+    display: none;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+button {
+    flex: 1;
+    padding: 12px 20px;
+    font-size: 1em;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-submit {
+    background: #bd93f9;
+    color: #1e1f29;
+}
+
+.btn-submit:hover:not(:disabled) {
+    background: #d5a8ff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(189, 147, 249, 0.3);
+}
+
+.btn-submit:disabled {
+    background: #6272a4;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-clear {
+    background: #44475a;
+    color: #f8f8f2;
+}
+
+.btn-clear:hover {
+    background: #595e74;
+    transform: translateY(-2px);
+}
+
+.file-info {
+    background: #1e1f29;
+    padding: 15px;
+    border-radius: 4px;
+    margin-top: 15px;
+    display: none;
+}
+
+.file-info.show {
+    display: block;
+}
+
+.file-info p {
+    margin: 5px 0;
+    font-size: 0.95em;
+}
+
+.file-info .label {
+    color: #8be9fd;
+    font-weight: bold;
+}
+
+.status-message {
+    padding: 15px;
+    border-radius: 4px;
+    margin-top: 15px;
+    display: none;
+    font-weight: bold;
+}
+
+.status-message.show {
+    display: block;
+}
+
+.status-message.success {
+    background: #50fa7b;
+    color: #1e1f29;
+    border-left: 4px solid #2d8659;
+}
+
+.status-message.error {
+    background: #ff5555;
+    color: #fff;
+    border-left: 4px solid #cc0000;
+}
+
+.status-message.loading {
+    background: #8be9fd;
+    color: #1e1f29;
+    border-left: 4px solid #0088aa;
+}
+
+.help-section {
+    margin-top: 30px;
+    padding-top: 30px;
+    border-top: 2px solid #44475a;
+}
+
+.help-section h3 {
+    color: #ffb86c;
+    margin-top: 0;
+}
+
+.help-section ol {
+    padding-left: 20px;
+    line-height: 1.8;
+}
+
+.help-section li {
+    margin-bottom: 10px;
+}
+
+.help-section code {
+    background: #1e1f29;
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: #8be9fd;
+    font-family: monospace;
+}
+
+@media (max-width: 768px) {
+    .content-wrapper {
+	grid-template-columns: 1fr;
+    }
+
+    .submit-header h1 {
+	font-size: 1.8em;
+    }
+
+    .drop-zone {
+	padding: 25px;
+    }
+
+    .drop-zone-icon {
+	font-size: 2em;
+    }
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(248, 248, 242, 0.3);
+    border-radius: 50%;
+    border-top-color: #f8f8f2;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

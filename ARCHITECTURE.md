@@ -68,7 +68,7 @@ During the CI/CD build step (GitHub Actions), this Rust parser will:
 ---
 
 ## 3. The Frontend (WebGL + HTMX)
-The frontend is a completely static website (hosted on Cloudflare Pages/GitHub Pages) consisting of a split-screen UI.
+The frontend is a completely static website (hosted on GitHub Pages) consisting of a split-screen UI.
 
 ### The Left Panel: The Graph (WebGL)
 * Fetches the static `graph.json` on load.
@@ -91,13 +91,3 @@ When a user writes a draft:
 2. **Deterministic Link Prediction:** A JavaScript worker runs classic Graph Theory algorithms (like Adamic-Adar or Jaccard Coefficient) against the locally downloaded `graph.json`. If a user cites `@lemma-A` and `@lemma-B`, the engine suggests nodes that frequently co-occur with A and B.
 3. **Local Search:** Queries are run against the downloaded `search_index.json` using standard BM25 ranking.
 
-*Strict Requirement: No Large Language Models (LLMs) or non-deterministic generative tools are to be used in this pipeline.*
-
----
-
-## 5. Development Roadmap & Division of Labor
-
-* **Task 1 (The Parser):** Build the Rust CLI tool that traverses a Typst AST and outputs `graph.json` and HTML fragments. *(Ideal for CS Undergrads)*
-* **Task 2 (The Renderer):** Build the static `index.html` file integrating WebGL for the canvas and HTMX for the side panel. *(Ideal for CS Undergrads)*
-* **Task 3 (The Infrastructure):** Set up GitHub Actions for the build step, Cloudflare Pages for hosting, and repository branch protection rules. *(Ideal for Senior Devs)*
-* **Task 4 (The Suggestion Engine):** Implement the WASM Typst editor and the local JavaScript Adamic-Adar link prediction algorithm. *(Ideal for CS Undergrads/PhDs)*

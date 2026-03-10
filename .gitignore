@@ -3,7 +3,6 @@
 # =========================
 public/compiled/
 public/json/graph.json
-public/search_index.json
 
 # =========================
 # 2. Rust & Compiler (Cargo)

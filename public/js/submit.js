@@ -66,40 +66,67 @@ btnClear.addEventListener('click', () => {
 });
 
 btnSubmit.addEventListener('click', async () => {
-    if (!selectedFile) {
-	showStatus('error', 'No file selected');
-	return;
-    }
+        const file = fileInput.files[0];
+        if (!file) {
+            showStatus('error', 'Please select a file first.');
+            return;
+        }
 
-    showStatus('loading', '<span class="loading-spinner"></span> Submitting and validating...');
-    btnSubmit.disabled = true;
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = 'Uploading...';
+        showStatus('', '');
 
-    try {
-	const formData = new FormData();
-	formData.append('file', selectedFile);
+        const formData = new FormData();
+        formData.append('file', file);
 
-	const response = await fetch('/api/submit', {
-	    method: 'POST',
-	    body: formData
-	});
+        try {
+            const response = await fetch('http://127.0.0.1:3000/api/submit', {
+                method: 'POST',
+                body: formData
+            });
 
-	const data = await response.json();
+            // 1. Read the raw text first so we don't crash on plain-text errors
+            const rawText = await response.text();
+            let data;
+            
+            try {
+                // 2. Try to parse it as JSON (for successful responses)
+                data = JSON.parse(rawText);
+            } catch (e) {
+                // 3. If it's not JSON, it's a raw text error from our Rust backend!
+                showStatus('error', rawText);
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = 'Push to Graph';
+                return; 
+            }
 
-	if (response.ok) {
-	    showStatus('success', `${data.message}`);
-	    btnClear.click();
-	    setTimeout(() => {
-		alert(`Success! Your submission "${data.id}" has been added to the graph.`);
-	    }, 1000);
-	} else {
-	    showStatus('error', `${data}`);
-	}
-    } catch (error) {
-	showStatus('error', `Network error: ${error.message}`);
-    } finally {
-	btnSubmit.disabled = !selectedFile;
-    }
-});
+            // 4. Handle standard JSON responses
+            if (response.ok) {
+                if (data.pr_url) {
+                    showStatus('success', `Success! Your math has been compiled.<br> <a href="${data.pr_url}" target="_blank" class="pr-link-btn">View Pull Request ↗</a>`);
+                } else {
+                    showStatus('success', `${data.message}`);
+                }
+                
+                fileInput.value = '';
+                document.getElementById('file-info').style.display = 'none';
+                document.getElementById('drop-zone').style.display = 'block';
+                
+                btnSubmit.textContent = 'Pushed!';
+                btnSubmit.disabled = true; 
+            } else {
+                showStatus('error', data.message || data.error || "An unknown error occurred.");
+                btnSubmit.textContent = 'Push to Graph';
+                btnSubmit.disabled = false;
+            }
+
+        } catch (error) {
+            showStatus('error', `Network error: ${error.message}`);
+            // Reset button on network error
+            btnSubmit.textContent = 'Push to Graph';
+            btnSubmit.disabled = false;
+        } 
+    });
 
 function showStatus(type, message) {
     statusMessage.className = `status-message show ${type}`;

@@ -24,12 +24,12 @@
 )
 
 // The exposed node types called by Rust
-#let theorem(id: "", deps: (), body) = _atlas_node("Theorem", rgb("#bd93f9"), id, deps, body)
-#let lemma(id: "", deps: (), body) = _atlas_node("Lemma", rgb("#8be9fd"), id, deps, body)
-#let definition(id: "", deps: (), body) = _atlas_node("Definition", rgb("#50fa7b"), id, deps, body)
-#let axiom(id: "", deps: (), body) = _atlas_node("Axiom", rgb("#ff5555"), id, deps, body)
-#let intuition_node(id: "", deps: (), body) = _atlas_node("Intuition", rgb("#f1fa8c"), id, deps, body)
-#let proof_node(id: "", deps: (), body) = _atlas_node("Proof", rgb("#ffb86c"), id, deps, body)
+#let theorem(id: "", deps: (), tags: (), body) = _atlas_node("Theorem", rgb("#bd93f9"), id, deps, body)
+#let lemma(id: "", deps: (), tags: (), body) = _atlas_node("Lemma", rgb("#8be9fd"), id, deps, body)
+#let definition(id: "", deps: (), tags: (), body) = _atlas_node("Definition", rgb("#50fa7b"), id, deps, body)
+#let axiom(id: "", deps: (), tags: (), body) = _atlas_node("Axiom", rgb("#ff5555"), id, deps, body)
+#let intuition_node(id: "", deps: (), tags: (), body) = _atlas_node("Intuition", rgb("#f1fa8c"), id, deps, body)
+#let proof_node(id: "", deps: (), tags: (), body) = _atlas_node("Proof", rgb("#ffb86c"), id, deps, body)
 
 // ==========================================
 // 2. Rigid Inner Blocks
@@ -39,10 +39,10 @@
 #let statement(body) = block(
   width: 100%,
   inset: (left: 14pt, top: 12pt, bottom: 12pt, right: 12pt),
-  stroke: (left: 4pt + rgb("#bd93f9")), // Thick purple accent border
-  fill: rgb("#bd93f9").transparentize(90%), // Adapts to SVG/PDF backgrounds
+  stroke: (left: 4pt + rgb("#bd93f9")), 
+  fill: rgb("#bd93f9").transparentize(90%), 
   radius: (right: 4pt),
-  margin: (bottom: 15pt),
+  below: 15pt,
   [
     #text(weight: "bold", size: 1.1em)[Statement]
     #v(0.5em)
@@ -56,7 +56,7 @@
   stroke: 1pt + rgb("#6272a4").transparentize(50%),
   fill: rgb("#8be9fd").transparentize(95%),
   radius: 4pt,
-  margin: (bottom: 15pt),
+  below: 15pt,
   [
     #text(weight: "bold", fill: rgb("#f1fa8c"))[💡 Intuition]
     #v(0.5em)
@@ -67,7 +67,7 @@
 #let proof(body) = block(
   width: 100%,
   inset: (left: 14pt, top: 12pt, bottom: 12pt, right: 12pt),
-  margin: (bottom: 10pt),
+  below: 10pt,
   [
     #text(style: "italic", weight: "bold")[Proof.]
     #v(0.5em)

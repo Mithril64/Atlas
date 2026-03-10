@@ -13,6 +13,11 @@
 </head>
 <body>
     <div id="graph-container"></div>
+
+    <div id="search-container">
+        <input type="text" id="search-input" placeholder="Search atlas..." autocomplete="off">
+        <ul id="search-results"></ul>
+    </div>
     
     <aside id="side-panel">
         <header id="panel-header">
@@ -20,21 +25,35 @@
             <button id="close-panel-btn" aria-label="Close panel">&times;</button>
         </header>
         
-        <div id="panel-content">
+	<div id="panel-content">
             <h2 id="node-title">Node Title</h2>
-            <p class="meta-id" style="border-bottom: none; padding-bottom: 5px;">ID: <span id="node-id"></span></p>
+            <p class="meta-id">ID: <span id="node-id"></span></p>
             
-            <div id="panel-actions" style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #44475a; display: flex; gap: 10px;">
+            <div id="panel-actions">
                 <button id="btn-copy" class="action-btn">Copy Typst</button>
                 <button id="btn-download" class="action-btn">Download PDF</button>
             </div>
+
+            <div id="panel-tabs" class="tabs-nav">
+                <button class="tab-btn active" data-target="tab-math">Rendered</button>
+                <button class="tab-btn" data-target="tab-source">Source</button>
+                <button class="tab-btn" data-target="tab-meta">Dependencies</button>
+            </div>
             
-            <div id="node-body">
-                <img id="node-math-image" src="" alt="Math content" style="max-width: 100%; height: auto; display: none;">
-                
+            <div id="tab-math" class="tab-pane active">
+                <img id="node-math-image" src="" alt="Math content">
                 <p id="node-placeholder">Loading...</p>
             </div>
-        </div>
+
+            <div id="tab-source" class="tab-pane">
+                <pre><code id="node-raw-code"></code></pre>
+            </div>
+
+            <div id="tab-meta" class="tab-pane">
+                <h3>Requires:</h3>
+                <ul id="node-dependencies" class="deps-list"></ul>
+            </div>
+        </div>           
     </aside>
 
     <div id="global-footer">

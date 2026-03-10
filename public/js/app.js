@@ -6,7 +6,7 @@ const typeColors = {
     "ghost": "rgba(68, 71, 90, 0.6)"
 };
 
-// --- 1. UI Controller ---
+// --- UI Controller ---
 const UIController = {
     panel: document.getElementById('side-panel'),
     closeBtn: document.getElementById('close-panel-btn'),
@@ -18,6 +18,11 @@ const UIController = {
     placeholder: document.getElementById('node-placeholder'),
     btnCopy: document.getElementById('btn-copy'),
     btnDownload: document.getElementById('btn-download'),
+
+    tabBtns: document.querySelectorAll('.tab-btn'),
+    tabPanes: document.querySelectorAll('.tab-pane'),
+    rawCodeDisplay: document.getElementById('node-raw-code'),
+    depsListDisplay: document.getElementById('node-dependencies'),
 
     currentNode: null,
 
@@ -36,7 +41,6 @@ const UIController = {
 
         this.btnDownload.addEventListener('click', () => {
             if (this.currentNode && !this.currentNode.isGhost) {
-                // Create a temporary link to force a download of the PDF
                 const link = document.createElement('a');
                 link.href = `./nodes/${this.currentNode.id}.pdf`;
                 link.download = `${this.currentNode.id}.pdf`;
@@ -45,10 +49,23 @@ const UIController = {
                 document.body.removeChild(link);
             }
         });
+
+        this.tabBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Remove active class from all
+                this.tabBtns.forEach(b => b.classList.remove('active'));
+                this.tabPanes.forEach(p => p.classList.remove('active'));
+                
+                // Add active class to clicked
+                e.target.classList.add('active');
+                const targetId = e.target.getAttribute('data-target');
+                document.getElementById(targetId).classList.add('active');
+            });
+        });
     },
 
     open(node) {
-        this.currentNode = node; // Save state for buttons
+        this.currentNode = node; 
         
         this.badge.textContent = node.type;
         this.badge.style.backgroundColor = typeColors[node.type] || '#6272a4';
@@ -57,20 +74,43 @@ const UIController = {
         const cleanName = node.id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
         this.title.textContent = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
 
+        // Reset tabs to default (Math view) every time a new node opens
+        this.tabBtns.forEach(b => b.classList.remove('active'));
+        this.tabPanes.forEach(p => p.classList.remove('active'));
+        this.tabBtns[0].classList.add('active');
+        this.tabPanes[0].classList.add('active');
+
+        // Populate Source Code Tab
+        this.rawCodeDisplay.textContent = node.body || "// No source code available.";
+
+        // Populate Dependencies Tab
+        this.depsListDisplay.innerHTML = '';
+        if (node.deps && node.deps.length > 0) {
+            node.deps.forEach(dep => {
+                const li = document.createElement('li');
+                li.textContent = dep;
+                this.depsListDisplay.appendChild(li);
+            });
+        } else {
+            const li = document.createElement('li');
+            li.textContent = "This node has no prerequisites.";
+            li.className = "no-deps";
+            this.depsListDisplay.appendChild(li);
+        }
+
+        // Handle Ghost Nodes vs Real Nodes
         if (node.isGhost) {
             this.mathImage.style.display = 'none';
             this.placeholder.style.display = 'block';
             this.placeholder.textContent = "This node hasn't been written yet.";
             this.placeholder.style.color = '#ffb86c';
             
-            // Hide action buttons for ghosts
             this.btnCopy.style.display = 'none';
             this.btnDownload.style.display = 'none';
         } else {
             this.placeholder.style.display = 'none';
             this.mathImage.style.display = 'block';
             
-            // Show action buttons for real nodes
             this.btnCopy.style.display = 'block';
             this.btnDownload.style.display = 'block';
             
@@ -117,7 +157,6 @@ function animateOpacity() {
         currentDimAlpha = targetDimAlpha; 
     }
 }
-
 
 async function initGraph() {
     try {
@@ -179,7 +218,6 @@ async function initGraph() {
                 if (!hoverNode) return link.target.isGhost ? 'rgba(68, 71, 90, 0.4)' : '#6272a4';
                 return neighborLinks.has(link) ? '#f8f8f2' : `rgba(98, 114, 164, ${currentDimAlpha * 0.5})`;
             })
-            
             .onNodeHover(node => {
                 neighbors.clear();
                 neighborLinks.clear();
@@ -203,25 +241,126 @@ async function initGraph() {
                 if (animationFrameId) cancelAnimationFrame(animationFrameId);
                 animateOpacity();
             })
-            
-            // Click Events
-	    .onNodeClick(node => {
+	        .onNodeClick(node => {
                 const targetZoom = 6;
                 const transitionTime = 800;
 
                 Graph.zoom(targetZoom, transitionTime);
                 
-                // 2. Calculate the camera shift
-                // We want the node to sit in the middle of the left half of the screen.
-                // That means shifting the camera's target 25% of the screen width to the right.
-                // We divide by targetZoom so the shift matches the canvas scale.
                 const screenShiftX = window.innerWidth / 4; 
                 const canvasShiftX = screenShiftX / targetZoom;
 
                 Graph.centerAt(node.x + canvasShiftX, node.y, transitionTime);
                 
                 UIController.open(node);
-            })
+            });
+
+        // --- Search Engine Logic ---
+        // --- Search Engine Logic ---
+        const searchInput = document.getElementById('search-input');
+        const searchResults = document.getElementById('search-results');
+        
+        let currentSelectedIndex = -1; // Tracks keyboard navigation
+
+        if (searchInput && searchResults) {
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                searchResults.innerHTML = '';
+                currentSelectedIndex = -1; // Reset selection on new input
+
+                if (!query) {
+                    searchResults.classList.remove('visible');
+                    return;
+                }
+
+                const currentNodes = Graph.graphData().nodes;
+                const matches = currentNodes.filter(n => {
+                    const cleanName = n.id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
+                    return n.id.toLowerCase().includes(query) || cleanName.toLowerCase().includes(query);
+                }).slice(0, 8); 
+
+                if (matches.length > 0) {
+                    searchResults.classList.add('visible');
+                    
+                    matches.forEach((node, index) => {
+                        const li = document.createElement('li');
+                        const cleanName = node.id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
+                        const badgeColor = typeColors[node.type] || '#6272a4';
+                        
+                        li.innerHTML = `
+                            <span>${cleanName.charAt(0).toUpperCase() + cleanName.slice(1)}</span>
+                            <span class="search-match-type" style="background-color: ${badgeColor}; color: #282a36;">${node.type}</span>
+                        `;
+                        
+                        li.addEventListener('click', () => {
+                            const targetZoom = 6;
+                            const transitionTime = 800;
+                            Graph.zoom(targetZoom, transitionTime);
+                            
+                            const screenShiftX = window.innerWidth / 4; 
+                            const canvasShiftX = screenShiftX / targetZoom;
+                            Graph.centerAt(node.x + canvasShiftX, node.y, transitionTime);
+                            
+                            UIController.open(node);
+                            
+                            searchInput.value = '';
+                            searchResults.classList.remove('visible');
+                            currentSelectedIndex = -1;
+                        });
+                        
+                        searchResults.appendChild(li);
+                    });
+                } else {
+                    searchResults.classList.remove('visible');
+                }
+            });
+
+            // Handle Keyboard Navigation
+            searchInput.addEventListener('keydown', (e) => {
+                const listItems = searchResults.querySelectorAll('li');
+                if (listItems.length === 0 || !searchResults.classList.contains('visible')) return;
+
+                if (e.key === 'ArrowDown' || e.key === 'Tab') {
+                    e.preventDefault(); // Prevents Tab from shifting window focus
+                    currentSelectedIndex++;
+                    if (currentSelectedIndex >= listItems.length) currentSelectedIndex = 0; // Wrap to top
+                    updateSelection(listItems);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    currentSelectedIndex--;
+                    if (currentSelectedIndex < 0) currentSelectedIndex = listItems.length - 1; // Wrap to bottom
+                    updateSelection(listItems);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (currentSelectedIndex >= 0 && currentSelectedIndex < listItems.length) {
+                        listItems[currentSelectedIndex].click(); // Select highlighted item
+                    } else if (listItems.length > 0) {
+                        listItems[0].click(); // Auto-select first item if none highlighted
+                    }
+                }
+            });
+
+            // Helper to apply the visual highlight class
+            function updateSelection(listItems) {
+                listItems.forEach((li, index) => {
+                    if (index === currentSelectedIndex) {
+                        li.classList.add('selected');
+                        // Ensure the selected item scrolls into view if the list is long
+                        li.scrollIntoView({ block: 'nearest' }); 
+                    } else {
+                        li.classList.remove('selected');
+                    }
+                });
+            }
+
+            // Hide dropdown if clicked outside
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                    searchResults.classList.remove('visible');
+                    currentSelectedIndex = -1;
+                }
+            });
+        }
 
     } catch (error) {
         console.error("Failed to load or parse graph.json in Atlas:", error);

@@ -14,6 +14,88 @@ html, body {
     height: 100%;
 }
 
+/* --- Search Interface --- */
+#search-container {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    width: calc(50vw - 48px); 
+    transform: none;
+    z-index: 500;
+}
+
+#search-input {
+    width: 100%;
+    padding: 12px 16px;
+    background-color: rgba(40, 42, 54, 0.85);
+    color: #f8f8f2;
+    border: 1px solid #44475a;
+    border-radius: 8px;
+    font-size: 1rem;
+    outline: none;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+#search-input:focus {
+    border-color: #8be9fd;
+    box-shadow: 0 0 12px rgba(139, 233, 253, 0.2);
+    background-color: rgba(40, 42, 54, 0.95);
+}
+
+#search-results {
+    list-style: none;
+    margin: 8px 0 0 0;
+    padding: 0;
+    background-color: rgba(40, 42, 54, 0.95);
+    border: 1px solid #44475a;
+    border-radius: 8px;
+    max-height: 350px;
+    overflow-y: auto;
+    backdrop-filter: blur(8px);
+    display: none; /* Hidden by default */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+#search-results.visible {
+    display: block;
+}
+
+#search-results li {
+    padding: 12px 16px;
+    cursor: pointer;
+    color: #f8f8f2;
+    border-bottom: 1px solid #44475a;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.1s ease;
+    border-left: 3px solid transparent;
+}
+
+#search-results li:last-child {
+    border-bottom: none;
+}
+
+/* Merged hover and keyboard-selected states */
+#search-results li:hover,
+#search-results li.selected {
+    background-color: #44475a;
+    border-left: 3px solid #bd93f9;
+    padding-left: 13px;
+}
+
+.search-match-type {
+    font-size: 0.7rem;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #282a36;
+}
+
 /* --- Side Panel UI --- */
 #side-panel {
     position: fixed;
@@ -149,4 +231,105 @@ html, body {
     border-color: #8be9fd;
     background-color: rgba(40, 42, 54, 1);
     box-shadow: 0 0 12px rgba(139, 233, 253, 0.2);
+}
+
+/* --- Side Panel Tabs for atlas --- */
+.tabs-nav {
+    display: flex;
+    border-bottom: 1px solid #44475a;
+    margin-bottom: 20px;
+    gap: 15px;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    color: #6272a4;
+    padding: 10px 5px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.tab-btn:hover {
+    color: #f8f8f2;
+}
+
+.tab-btn.active {
+    color: #f8f8f2;
+    border-bottom: 2px solid #bd93f9; /* Purple accent */
+}
+
+/* --- Tab Panes --- */
+.tab-pane {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Source Code Pane --- */
+pre {
+    background-color: #1e1f29;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #44475a;
+    overflow-x: auto;
+    margin: 0;
+}
+
+#node-raw-code {
+    color: #8be9fd;
+    font-family: 'Menlo', 'Monaco', monospace;
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+}
+
+/* --- Dependencies Pane --- */
+.tab-pane h3 {
+    color: #ffb86c;
+    font-size: 1rem;
+    margin-top: 0;
+}
+
+.deps-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.deps-list li {
+    background: #343746;
+    color: #f8f8f2;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    border-left: 3px solid #50fa7b;
+}
+
+.deps-list li.no-deps {
+    background: transparent;
+    border-left: none;
+    color: #6272a4;
+    font-style: italic;
+    font-family: sans-serif;
+    padding-left: 0;
+}
+
+/* --- Clean up from previous edits --- */
+#panel-actions {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
 }

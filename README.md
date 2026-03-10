@@ -57,37 +57,74 @@ git clone https://github.com/Mithril64/Atlas.git
 cd Atlas
 
 # Compile a specific file to PDF for local viewing
-typst compile math/analysis/real/bolzano.typ
+typst compile math/algebra/group.typ
 ```
 
 ### For Developers (Building the Engine)
-You will need `cargo` (Rust) and `npm`/`yarn` installed.
+You will need Rust and Typst CLI installed.
+
+**Step 1: Compile the graph**
 ```bash
-# Clone the repository
-git clone https://github.com/Mithril64/Atlas.git
-cd Atlas
+cd Atlas/compiler
+cargo run --release
+```
+This generates `../public/json/graph.json` and SVG/PDF fragments.
 
-# Run the Rust parser to generate the public/ HTML and JSON files
-cd compiler
-cargo run -- --source ../math --output ../public
+**Step 2: Start the web server**
+```bash
+cd Atlas/compiler
+cargo run --release -- server
+```
+This starts the submission API on `http://127.0.0.1:3000`.
 
-# Serve the static frontend locally
-cd ../frontend
-npx serve
+**Step 3: Open the web interface**
+```bash
+# Main graph viewer
+open http://127.0.0.1:3000/../public/index.html
+
+# Contributor portal (submit new nodes)
+open http://127.0.0.1:3000/../public/submit.html
 ```
 
 ---
 
 ## Contributing
 
+### For Mathematicians & Researchers
 
-We are actively looking for contributors across all disciplines! 
-* **Mathematicians:** Help us map out new subfields, write intuition blocks, and verify proofs.
-* **Rust Developers:** Help us optimize the AST traversal and metadata extraction.
-* **Frontend Developers:** Help us build a beautiful, performant WebGL canvas and WASM editor.
+Submit new definitions, theorems, and proofs via the web portal:
 
+1. Go to **`/submit.html`** on the Atlas server
+2. Write your content in Typst with metadata:
+   ```typst
+   // id: thm-my-theorem
+   // type: theorem
+   // deps: [def-group, ax-choice]
+   ---
+   
+   Your mathematical content here...
+   ```
+3. Upload and your contribution is automatically validated and added to the graph!
 
-Please read our [Contributing Guidelines](CONTRIBUTING.md) to get started.
+See [**CONTRIBUTOR_GUIDE.md**](CONTRIBUTOR_GUIDE.md) for detailed instructions.
+
+### For Software Developers
+
+* **Backend (Rust):** Improve the parser, add validation, optimize compilation
+* **Frontend (HTML/JS):** Enhance the graph viewer, submission UI, search functionality
+* **DevOps:** Help with deployment, CI/CD, monitoring
+
+See [**DEPLOYMENT.md**](DEPLOYMENT.md) and [**ARCHITECTURE.md**](ARCHITECTURE.md) for technical details.
+
+---
+
+## Documentation
+
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System design and data flow
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production deployment guide
+- **[API_REFERENCE.md](API_REFERENCE.md)** - REST API endpoints
+- **[CONTRIBUTOR_GUIDE.md](CONTRIBUTOR_GUIDE.md)** - How to submit content
+- **[INTEGRATION_CHECKLIST.md](INTEGRATION_CHECKLIST.md)** - Implementation checklist
 
 ---
 

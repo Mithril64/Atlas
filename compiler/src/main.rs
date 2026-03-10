@@ -11,12 +11,14 @@ use axum::{
     Router,
 };
 use tower_http::cors::CorsLayer;
+use std::env;
 
 #[derive(Debug, Serialize)]
 struct MathNode {
     id: String,
     node_type: String, 
     deps: Vec<String>,
+    tags: Vec<String>, // Extracts tags for WebGL search filtering
     body: String, 
 }
 
@@ -40,6 +42,7 @@ fn walk_tree(node: &SyntaxNode, extracted_nodes: &mut Vec<MathNode>) {
             id: String::new(),
             node_type: String::new(),
             deps: Vec::new(),
+            tags: Vec::new(),
             body: String::new(),
         };
         
@@ -69,6 +72,13 @@ fn walk_tree(node: &SyntaxNode, extracted_nodes: &mut Vec<MathNode>) {
                                 for array_item in part.children() {
                                     if array_item.kind() == SyntaxKind::Str {
                                         current_node.deps.push(array_item.text().trim_matches('"').to_string());
+                                    }
+                                }
+                            }
+                            if arg_name == "tags" && part.kind() == SyntaxKind::Array {
+                                for array_item in part.children() {
+                                    if array_item.kind() == SyntaxKind::Str {
+                                        current_node.tags.push(array_item.text().trim_matches('"').to_string());
                                     }
                                 }
                             }
@@ -113,12 +123,12 @@ fn process_directory(dir: &Path, all_nodes: &mut Vec<MathNode>) {
     }
 }
 
-/// Parse loose submission format and extract metadata
-fn ingest_submission(raw_text: &str) -> Result<(String, String), String> {
-    // Regex patterns to find frontmatter comments
+/// Parse loose submission format, extract metadata, and determine routing path
+fn ingest_submission(raw_text: &str) -> Result<(String, String, String), String> {
     let re_id = Regex::new(r"//\s*id:\s*([^\n\r]+)").unwrap();
     let re_type = Regex::new(r"//\s*type:\s*([^\n\r]+)").unwrap();
     let re_deps = Regex::new(r"//\s*deps:\s*\[([^\]]*)\]").unwrap();
+    let re_tags = Regex::new(r"//\s*tags:\s*\[([^\]]*)\]").unwrap();
 
     let id = re_id
         .captures(raw_text)
@@ -132,19 +142,31 @@ fn ingest_submission(raw_text: &str) -> Result<(String, String), String> {
         .trim()
         .to_string();
 
-    let deps_raw_capture = re_deps
+    let deps_raw = re_deps
         .captures(raw_text)
-        .ok_or("Missing 'deps' metadata (format: // deps: [dep1, dep2])")?;
-    let deps_raw = deps_raw_capture[1].trim().to_string();
+        .ok_or("Missing 'deps' metadata (format: // deps: [dep1, dep2])")?[1]
+        .trim()
+        .to_string();
 
-    // Validate node type
+    // Extract tags, defaulting to empty if missing
+    let tags_raw = re_tags
+        .captures(raw_text)
+        .map_or("".to_string(), |cap| cap[1].trim().to_string());
+
+    // Auto-Routing: Grab the first tag to use as the directory name
+    let mut primary_tag = "uncategorized".to_string();
+    if !tags_raw.is_empty() {
+        if let Some(first_tag) = tags_raw.split(',').next() {
+            let clean_tag = first_tag.trim().trim_matches(|c| c == '"' || c == '\'').to_lowercase().replace(" ", "-");
+            if !clean_tag.is_empty() {
+                primary_tag = clean_tag;
+            }
+        }
+    }
+
     let valid_types = ["theorem", "lemma", "definition", "axiom", "intuition", "proof"];
     if !valid_types.contains(&node_type.as_str()) {
-        return Err(format!(
-            "Invalid type '{}'. Must be one of: {}",
-            node_type,
-            valid_types.join(", ")
-        ));
+        return Err(format!("Invalid type '{}'. Must be one of: {}", node_type, valid_types.join(", ")));
     }
 
     let body = if let Some(pos) = raw_text.find("---") {
@@ -174,11 +196,11 @@ fn ingest_submission(raw_text: &str) -> Result<(String, String), String> {
     }
 
     let formatted = format!(
-        "#{}\n(\n    id: \"{}\",\n    deps: [{}]\n)[\n{}\n]\n",
-        node_type, id, deps_raw, body
+        "#{}\n(\n    id: \"{}\",\n    deps: [{}],\n    tags: [{}]\n)[\n{}\n]\n",
+        node_type, id, deps_raw, tags_raw, body
     );
 
-    Ok((id, formatted))
+    Ok((id, formatted, primary_tag))
 }
 
 /// Validate submission by attempting to compile with Typst
@@ -193,7 +215,7 @@ fn validate_submission(typst_code: &str, submission_id: &str) -> Result<(), Stri
         .map_err(|e| format!("Failed to write temp file: {}", e))?;
 
     let output = Command::new("typst")
-        .args(["compile", "--root", "..", &temp_file, "/dev/null"])
+        .args(["compile", "--root", "..", "--format", "pdf", &temp_file, "/dev/null"])
         .output()
         .map_err(|e| format!("Failed to execute typst: {}", e))?;
 
@@ -208,23 +230,20 @@ fn validate_submission(typst_code: &str, submission_id: &str) -> Result<(), Stri
 }
 
 fn main() {
-    println!("Starting the Atlas Compiler...");
+    println!("Starting the atlas Compiler...");
 
-    let args: Vec<String> = std::env::args().collect();
+    let args: Vec<String> = env::args().collect();
     
-    // Check if running in server mode
     if args.len() > 1 && args[1] == "server" {
-        println!("🚀 Starting Atlas Submission Server...");
+        println!("🚀 Starting atlas Submission Server...");
         start_server();
     } else {
-        // Default: Compile mode
         compile_all();
     }
 }
 
 #[tokio::main]
 async fn start_server() {
-    // Build our application with routes
     let app = Router::new()
         .route("/api/submit", post(upload_handler))
         .route("/api/graph", get(graph_handler))
@@ -258,8 +277,8 @@ async fn upload_handler(mut multipart: Multipart) -> Result<Json<serde_json::Val
             let content = String::from_utf8_lossy(&data).to_string();
 
             match ingest_submission(&content) {
-                Ok((id, formatted_typst)) => {
-                    // Validate before saving
+                Ok((id, formatted_typst, primary_tag)) => {
+                    // 1. Validate before saving
                     if let Err(validation_err) = validate_submission(&formatted_typst, &id) {
                         return Err((
                             axum::http::StatusCode::BAD_REQUEST,
@@ -267,51 +286,58 @@ async fn upload_handler(mut multipart: Multipart) -> Result<Json<serde_json::Val
                         ));
                     }
 
-                    // Create submissions directory if it doesn't exist
-                    let submissions_dir = Path::new("../math/submissions");
-                    fs::create_dir_all(submissions_dir)
+                    // 2. Create specific subdirectory based on the tag
+                    let dir_path = format!("../math/{}", primary_tag);
+                    fs::create_dir_all(&dir_path)
                         .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to create directory: {}", e)))?;
 
-                    // Save file to /math/submissions/
-                    let path = format!("../math/submissions/{}.typ", id);
+                    let path = format!("{}/{}.typ", dir_path, id);
                     fs::write(&path, &formatted_typst)
                         .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to write file: {}", e)))?;
 
-                    // Automated Git Commit
-                    let git_add = Command::new("git")
-                        .args(["add", &path])
-                        .status();
-
-                    if let Err(e) = git_add {
-                        eprintln!("Warning: git add failed: {}", e);
+                    // --- NEW: PREVENT DEMO SPAM ---
+                    if primary_tag == "demo" {
+                        return Ok(Json(serde_json::json!({
+                            "status": "success",
+                            "message": "Demo file processed and saved locally. Git/PR pipeline bypassed.",
+                            "id": id
+                        })));
                     }
 
-                    let git_commit = Command::new("git")
-                        .args(["commit", "-m", &format!("Atlas Submission: {}", id)])
-                        .status();
+                    // --- PR PIPELINE ---
+                    let timestamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+                    let branch_name = format!("submission-{}-{}", id, timestamp);
 
-                    match git_commit {
-                        Ok(status) if status.success() => {
-                            return Ok(Json(serde_json::json!({
-                                "status": "success",
-                                "message": format!("Successfully submitted and committed: {}", id),
-                                "id": id
-                            })));
+                    // Checkout new branch
+                    Command::new("git").args(["checkout", "-b", &branch_name]).status().unwrap();
+
+                    // Add and Commit
+                    Command::new("git").args(["add", &path]).status().unwrap();
+                    Command::new("git").args(["commit", "-m", &format!("atlas Submission: {}", id)]).status().unwrap();
+
+                    // Push branch to remote
+                    let push_status = Command::new("git").args(["push", "-u", "origin", &branch_name]).status();
+
+                    // Checkout main branch again so the local server stays clean
+                    Command::new("git").args(["checkout", "main"]).status().unwrap();
+
+                    // Open the PR via GitHub API
+                    if push_status.is_ok() && push_status.unwrap().success() {
+                        match create_github_pr(&branch_name, &id).await {
+                            Ok(pr_url) => {
+                                return Ok(Json(serde_json::json!({
+                                    "status": "success",
+                                    "message": format!("Successfully pushed! PR opened at: {}", pr_url),
+                                    "id": id,
+                                    "pr_url": pr_url
+                                })));
+                            }
+                            Err(e) => {
+                                return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Pushed, but failed to open PR: {}", e)));
+                            }
                         }
-                        Ok(_) => {
-                            // Commit might fail if nothing changed, but file was written
-                            return Ok(Json(serde_json::json!({
-                                "status": "success",
-                                "message": format!("File saved: {} (git commit skipped)", id),
-                                "id": id
-                            })));
-                        }
-                        Err(e) => {
-                            return Err((
-                                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                                format!("Git error: {}", e),
-                            ));
-                        }
+                    } else {
+                        return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Failed to push branch to GitHub. Check server permissions.".to_string()));
                     }
                 }
                 Err(parse_err) => {
@@ -364,7 +390,7 @@ fn compile_all() {
             continue; 
         } 
 
-        // --- 1. Compile the Web SVG (Dark Mode, Transparent Background) ---
+        // --- 1. Compile the Web SVG ---
         let svg_content = format!(
             "#import \"../math/schema/math-graph.typ\": *\n\
              #set page(width: 500pt, height: auto, margin: 10pt, fill: none)\n\
@@ -383,7 +409,7 @@ fn compile_all() {
             
         let _ = fs::remove_file(&temp_svg);
 
-        // --- 2. Compile the Downloadable PDF (Light Mode, Clean Document) ---
+        // --- 2. Compile the Downloadable PDF ---
         let pdf_content = format!(
             "#import \"../math/schema/math-graph.typ\": *\n\
              #set page(width: auto, height: auto, margin: 20pt, fill: rgb(\"ffffff\"))\n\
@@ -409,5 +435,41 @@ fn compile_all() {
         let _ = fs::remove_file(&temp_pdf);
     }
 
-    println!("Atlas Compilation Successful!");
+    println!("atlas Compilation Successful!");
+}
+
+async fn create_github_pr(branch_name: &str, node_id: &str) -> Result<String, String> {
+    let token = env::var("GITHUB_TOKEN").map_err(|_| "GITHUB_TOKEN not set in environment".to_string())?;
+    
+    let repo_owner = "Mithril64";
+    let repo_name = "Atlas"; // Left capitalized since it represents the target URL
+    
+    let url = format!("https://api.github.com/repos/{}/{}/pulls", repo_owner, repo_name);
+
+    let client = reqwest::Client::new();
+    
+    let payload = serde_json::json!({
+        "title": format!("atlas Submission: {}", node_id),
+        "body": format!("Automated submission for node `{}` from the atlas web portal.", node_id),
+        "head": branch_name,
+        "base": "main"
+    });
+
+    let response = client.post(&url)
+        .header("Authorization", format!("Bearer {}", token))
+        .header("User-Agent", "atlas-Compiler-Bot")
+        .header("Accept", "application/vnd.github.v3+json")
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+
+    if response.status().is_success() {
+        let res_json: serde_json::Value = response.json().await.map_err(|_| "Failed to parse JSON".to_string())?;
+        let pr_url = res_json["html_url"].as_str().unwrap_or("Unknown URL").to_string();
+        Ok(pr_url)
+    } else {
+        let error_text = response.text().await.unwrap_or_default();
+        Err(format!("GitHub API Error: {}", error_text))
+    }
 }

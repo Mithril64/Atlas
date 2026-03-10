@@ -52,11 +52,9 @@ const UIController = {
 
         this.tabBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                // Remove active class from all
                 this.tabBtns.forEach(b => b.classList.remove('active'));
                 this.tabPanes.forEach(p => p.classList.remove('active'));
                 
-                // Add active class to clicked
                 e.target.classList.add('active');
                 const targetId = e.target.getAttribute('data-target');
                 document.getElementById(targetId).classList.add('active');
@@ -74,16 +72,13 @@ const UIController = {
         const cleanName = node.id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
         this.title.textContent = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
 
-        // Reset tabs to default (Math view) every time a new node opens
         this.tabBtns.forEach(b => b.classList.remove('active'));
         this.tabPanes.forEach(p => p.classList.remove('active'));
         this.tabBtns[0].classList.add('active');
         this.tabPanes[0].classList.add('active');
 
-        // Populate Source Code Tab
         this.rawCodeDisplay.textContent = node.body || "// No source code available.";
 
-        // Populate Dependencies Tab
         this.depsListDisplay.innerHTML = '';
         if (node.deps && node.deps.length > 0) {
             node.deps.forEach(dep => {
@@ -98,7 +93,6 @@ const UIController = {
             this.depsListDisplay.appendChild(li);
         }
 
-        // Handle Ghost Nodes vs Real Nodes
         if (node.isGhost) {
             this.mathImage.style.display = 'none';
             this.placeholder.style.display = 'block';
@@ -135,6 +129,7 @@ UIController.init();
 let hoverNode = null;
 const neighbors = new Set();
 const neighborLinks = new Set();
+const searchFilteredNodes = new Set(); // Tracks nodes isolated by the command palette
 let currentDimAlpha = 1.0; 
 let targetDimAlpha = 1.0;
 let animationFrameId = null;
@@ -166,7 +161,8 @@ async function initGraph() {
         const nodes = data.map(node => ({ 
             id: node.id, 
             type: node.node_type,
-            body: node.body 
+            body: node.body,
+            tags: node.tags || [] // Added in case we use tags later
         }));
 
         const validNodeIds = new Set(nodes.map(n => n.id));
@@ -201,20 +197,31 @@ async function initGraph() {
 
         Graph
             .nodeColor(node => {
+                // 1. Command Palette Isolation Override
+                if (searchFilteredNodes.size > 0) {
+                    return searchFilteredNodes.has(node.id) 
+                        ? (typeColors[node.type] || "#6272a4") 
+                        : 'rgba(68, 71, 90, 0.1)';
+                }
+                
+                // 2. Standard Hover Logic
                 if (!hoverNode) return typeColors[node.type] || "#6272a4";
                 return neighbors.has(node.id) 
                     ? typeColors[node.type] 
                     : `rgba(98, 114, 164, ${currentDimAlpha})`; 
             })
             .linkColor(link => {
-                if (!hoverNode) {
-                    return link.target.isGhost ? 'rgba(68, 71, 90, 0.4)' : '#6272a4';
-                }
+                if (searchFilteredNodes.size > 0) return 'rgba(68, 71, 90, 0.05)'; 
+                
+                if (!hoverNode) return link.target.isGhost ? 'rgba(68, 71, 90, 0.4)' : '#6272a4';
                 return neighborLinks.has(link) 
                     ? '#f8f8f2' 
                     : `rgba(98, 114, 164, ${currentDimAlpha * 0.5})`; 
             })
             .linkDirectionalArrowColor(link => {
+                // Must mirror the linkColor logic so arrows dim too
+                if (searchFilteredNodes.size > 0) return 'rgba(68, 71, 90, 0.05)';
+                
                 if (!hoverNode) return link.target.isGhost ? 'rgba(68, 71, 90, 0.4)' : '#6272a4';
                 return neighborLinks.has(link) ? '#f8f8f2' : `rgba(98, 114, 164, ${currentDimAlpha * 0.5})`;
             })
@@ -256,24 +263,54 @@ async function initGraph() {
             });
 
         // --- Search Engine Logic ---
-        // --- Search Engine Logic ---
         const searchInput = document.getElementById('search-input');
         const searchResults = document.getElementById('search-results');
         
-        let currentSelectedIndex = -1; // Tracks keyboard navigation
+        let currentSelectedIndex = -1; 
 
         if (searchInput && searchResults) {
             searchInput.addEventListener('input', (e) => {
                 const query = e.target.value.toLowerCase().trim();
                 searchResults.innerHTML = '';
-                currentSelectedIndex = -1; // Reset selection on new input
+                currentSelectedIndex = -1; 
+                searchFilteredNodes.clear(); // Reset visual filters on every keystroke
 
                 if (!query) {
                     searchResults.classList.remove('visible');
+                    Graph.nodeColor(Graph.nodeColor()); // Force re-render to restore colors
                     return;
                 }
 
                 const currentNodes = Graph.graphData().nodes;
+
+                // --- COMMAND PARSER ---
+                if (query.startsWith('type:')) {
+                    const typeQuery = query.split(':')[1].trim();
+                    if (typeQuery) {
+                        currentNodes.forEach(n => {
+                            if (n.type.toLowerCase().includes(typeQuery)) searchFilteredNodes.add(n.id);
+                        });
+                        Graph.nodeColor(Graph.nodeColor()); // Force WebGL update
+                    }
+                    searchResults.classList.remove('visible'); // Hide dropdown
+                    return; 
+                }
+
+                if (query.startsWith('tag:')) {
+                    const tagQuery = query.split(':')[1].trim();
+                    if (tagQuery) {
+                        currentNodes.forEach(n => {
+                            if (n.tags && n.tags.some(t => t.toLowerCase().includes(tagQuery))) {
+                                searchFilteredNodes.add(n.id);
+                            }
+                        });
+                        Graph.nodeColor(Graph.nodeColor()); // Force WebGL update
+                    }
+                    searchResults.classList.remove('visible'); // Hide dropdown
+                    return;
+                }
+
+                // --- STANDARD SEARCH (Dropdown) ---
                 const matches = currentNodes.filter(n => {
                     const cleanName = n.id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
                     return n.id.toLowerCase().includes(query) || cleanName.toLowerCase().includes(query);
@@ -306,6 +343,10 @@ async function initGraph() {
                             searchInput.value = '';
                             searchResults.classList.remove('visible');
                             currentSelectedIndex = -1;
+                            
+                            // Clear filters if someone clicked a result
+                            searchFilteredNodes.clear();
+                            Graph.nodeColor(Graph.nodeColor());
                         });
                         
                         searchResults.appendChild(li);
@@ -321,21 +362,21 @@ async function initGraph() {
                 if (listItems.length === 0 || !searchResults.classList.contains('visible')) return;
 
                 if (e.key === 'ArrowDown' || e.key === 'Tab') {
-                    e.preventDefault(); // Prevents Tab from shifting window focus
+                    e.preventDefault(); 
                     currentSelectedIndex++;
-                    if (currentSelectedIndex >= listItems.length) currentSelectedIndex = 0; // Wrap to top
+                    if (currentSelectedIndex >= listItems.length) currentSelectedIndex = 0; 
                     updateSelection(listItems);
                 } else if (e.key === 'ArrowUp') {
                     e.preventDefault();
                     currentSelectedIndex--;
-                    if (currentSelectedIndex < 0) currentSelectedIndex = listItems.length - 1; // Wrap to bottom
+                    if (currentSelectedIndex < 0) currentSelectedIndex = listItems.length - 1; 
                     updateSelection(listItems);
                 } else if (e.key === 'Enter') {
                     e.preventDefault();
                     if (currentSelectedIndex >= 0 && currentSelectedIndex < listItems.length) {
-                        listItems[currentSelectedIndex].click(); // Select highlighted item
+                        listItems[currentSelectedIndex].click(); 
                     } else if (listItems.length > 0) {
-                        listItems[0].click(); // Auto-select first item if none highlighted
+                        listItems[0].click(); 
                     }
                 }
             });
@@ -345,7 +386,6 @@ async function initGraph() {
                 listItems.forEach((li, index) => {
                     if (index === currentSelectedIndex) {
                         li.classList.add('selected');
-                        // Ensure the selected item scrolls into view if the list is long
                         li.scrollIntoView({ block: 'nearest' }); 
                     } else {
                         li.classList.remove('selected');

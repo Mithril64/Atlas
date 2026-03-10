@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Atlas | Contribute</title>
+    <title>atlas | Contribute</title>
     <link rel="stylesheet" href="css/submit.css">
     <script src="js/submit.js" defer></script>
 </head>
@@ -14,7 +14,7 @@
 
     <div class="submit-container">
         <header class="submit-header">
-            <h1>Atlas Contributor Portal</h1>
+            <h1>atlas Contributor Portal</h1>
             <p>Submit mathematical definitions, theorems, and proofs to the graph.</p>
         </header>
 
@@ -28,6 +28,7 @@
                     <pre><code><span class="comment">// id: thm-my-theorem</span>
 <span class="comment">// type: theorem</span>
 <span class="comment">// deps: [def-group]</span>
+<span class="comment">// tags: ["algebra", "group-theory"]</span>
 <span class="comment">---</span>
 
 <span class="keyword">#statement</span>[
@@ -49,6 +50,7 @@
                         <li><strong>id:</strong> Unique identifier (e.g., <code>thm-bolzano</code>).</li>
                         <li><strong>type:</strong> Must be: <code>theorem</code>, <code>lemma</code>, <code>definition</code>, <code>axiom</code>, <code>intuition</code>, or <code>proof</code>.</li>
                         <li><strong>deps:</strong> Array of prerequisite IDs (can be empty: <code>[]</code>).</li>
+                        <li><strong>tags:</strong> Array of topics for auto-sorting (e.g., <code>["topology"]</code>). The first tag determines the folder.</li>
                         <li><hr style="border: 0; border-top: 1px solid #44475a; margin: 15px 0;"></li>
                         <li><strong>#statement[]:</strong> The formal mathematical claim.</li>
                         <li><strong>#intuition[]:</strong> A plain-English explanation of what the math actually means.</li>

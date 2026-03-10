@@ -72,10 +72,18 @@
     border-bottom: 1px solid #44475a;
 }
 
+#node-math-image {
+    width: 100%
+    max-width: 1200px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
 #node-body {
-    color: #f8f8f2;
-    line-height: 1.6;
-    font-size: 1.1rem;
+    padding: 20px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 #node-body p {

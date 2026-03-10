@@ -129,7 +129,7 @@ for node in &all_nodes {
         // --- 1. Compile the Web SVG (Dark Mode, Transparent Background) ---
         let svg_content = format!(
             "#import \"../math/schema/math-graph.typ\": *\n\
-             #set page(width: 400pt, height: auto, margin: 10pt, fill: none)\n\
+             #set page(width: 500pt, height: auto, margin: 10pt, fill: none)\n\
              #set text(fill: rgb(\"f8f8f2\"), size: 14pt)\n\n\
              {}", 
             node.body

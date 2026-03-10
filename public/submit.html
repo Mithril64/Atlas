@@ -3,70 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Atlas Contributor Portal</title>
-    <link rel="stylesheet" href="css/style.css">
+    <title>Atlas | Contribute</title>
     <link rel="stylesheet" href="css/submit.css">
     <script src="js/submit.js" defer></script>
 </head>
 <body>
-    <div class="submit-container">
-        <div class="submit-header">
-            <h1>Atlas Contributor Portal</h1>
-            <p>Submit new mathematical definitions, theorems, and proofs to the graph</p>
-        </div>
+    <nav class="top-nav">
+        <a href="index.html" class="back-link">&larr; Back to Graph</a>
+    </nav>
 
-        <div class="content-wrapper">
-            <!-- Left Panel: Format Instructions -->
-            <div class="section">
+    <div class="submit-container">
+        <header class="submit-header">
+            <h1>Atlas Contributor Portal</h1>
+            <p>Submit mathematical definitions, theorems, and proofs to the graph.</p>
+        </header>
+
+        <main class="content-wrapper">
+          <section class="info-section">
                 <h2>Required Format</h2>
                 
-                <div class="instructions">
-                    <strong>Step 1:</strong> Write your content in <strong>Typst</strong> markdown<br>
-                    <strong>Step 2:</strong> Add <strong>metadata comments</strong> at the top<br>
-                    <strong>Step 3:</strong> Upload the file and we'll validate it
-                </div>
-
-                <p style="color: #b5b5b5; margin: 20px 0;">Your submission must include these three metadata lines at the beginning:</p>
+                <p class="subtitle">Your <code>.typ</code> file must contain the metadata block and three rigid content blocks:</p>
 
                 <div class="format-example">
-                	<pre>
-  <span class="comment">// id: thm-my-theorem</span>
-  <span class="comment">// type: theorem</span>
-  <span class="comment">// deps: [def-group, ax-associativity]</span>
-  <span class="comment">---</span>
+                    <pre><code><span class="comment">// id: thm-my-theorem</span>
+<span class="comment">// type: theorem</span>
+<span class="comment">// deps: [def-group]</span>
+<span class="comment">---</span>
 
-  <span class="keyword">Let</span> $G$ be a group. Then...
-			</pre>
+<span class="keyword">#statement</span>[
+    Let $G$ be a group. Then...
+]
+
+<span class="keyword">#intuition</span>[
+    This essentially means that...
+]
+
+<span class="keyword">#proof</span>[
+    By the definition of a group...
+]</code></pre>
                 </div>
 
                 <div class="help-section">
-                    <h3>Metadata Reference</h3>
-                    <ol>
-                        <li>
-				<strong>Id:</strong> Unique identifier (e.g., <code>thm-bolzano-weierstrass</code>)
-			</li>
-                        <li>
-				<strong>Type:</strong> One of: <code>theorem</code>, <code>lemma</code>, <code>definition</code>, <code>axiom</code>, <code>intuition</code>, <code>proof</code>
-
-			</li>
-                        <li>
-				<strong>Deps:</strong> Array of IDs this node depends on (can be empty: <code>[]</code>)
-			</li>
-                    </ol>
+                    <h3>Structure Reference</h3>
+                    <ul>
+                        <li><strong>id:</strong> Unique identifier (e.g., <code>thm-bolzano</code>).</li>
+                        <li><strong>type:</strong> Must be: <code>theorem</code>, <code>lemma</code>, <code>definition</code>, <code>axiom</code>, <code>intuition</code>, or <code>proof</code>.</li>
+                        <li><strong>deps:</strong> Array of prerequisite IDs (can be empty: <code>[]</code>).</li>
+                        <li><hr style="border: 0; border-top: 1px solid #44475a; margin: 15px 0;"></li>
+                        <li><strong>#statement[]:</strong> The formal mathematical claim.</li>
+                        <li><strong>#intuition[]:</strong> A plain-English explanation of what the math actually means.</li>
+                        <li><strong>#proof[]:</strong> The rigorous derivation. <em>(Write "Omitted" if it is an axiom)</em>.</li>
+                    </ul>
                 </div>
+            </section>
 
-                <div class="instructions" style="margin-top: 20px;">
-                    <strong>Valid ID formats:</strong><br>
-                    <code>thm-fermat-last</code>, <code>def-prime-number</code>, <code>ax-choice</code>, <code>lem-triangle-inequality</code>
-                </div>
-            </div>
-
-            <!-- Right Panel: Upload Interface -->
-            <div class="section">
-                <h2>Upload Your Submission</h2>
+            <section class="upload-section">
+                <h2>Upload Submission</h2>
 
                 <div class="drop-zone" id="drop-zone">
-                    <div class="drop-zone-icon">📎</div>
+                    <div class="drop-zone-icon">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    </div>
                     <div class="drop-zone-text">Drop your .typ file here</div>
                     <div class="drop-zone-subtext">or click to browse</div>
                 </div>
@@ -74,18 +71,20 @@
                 <input type="file" id="typ-file" accept=".typ" />
 
                 <div class="file-info" id="file-info">
-                    <p><span class="label">File:</span> <span id="file-name"></span></p>
-                    <p><span class="label">Size:</span> <span id="file-size"></span></p>
+                    <div class="file-details">
+                        <span id="file-name" class="name"></span>
+                        <span id="file-size" class="size"></span>
+                    </div>
                 </div>
 
                 <div class="button-group">
-                    <button class="btn-submit" id="btn-submit" disabled>Push to Graph</button>
                     <button class="btn-clear" id="btn-clear">Clear</button>
+                    <button class="btn-submit" id="btn-submit" disabled>Push to Graph</button>
                 </div>
 
                 <div class="status-message" id="status-message"></div>
-            </div>
-        </div>
+            </section>
+        </main>
     </div>
 </body>
 </html>

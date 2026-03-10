@@ -147,7 +147,6 @@ fn ingest_submission(raw_text: &str) -> Result<(String, String), String> {
         ));
     }
 
-    // Extract the body (content after the frontmatter divider)
     let body = if let Some(pos) = raw_text.find("---") {
         raw_text[pos + 3..].trim().to_string()
     } else {
@@ -155,10 +154,25 @@ fn ingest_submission(raw_text: &str) -> Result<(String, String), String> {
     };
 
     if body.is_empty() {
-        return Err("Submission body is empty after frontmatter".to_string());
+        return Err("Submission body is empty after frontmatter.".to_string());
     }
 
-    // Format into the official Atlas syntax
+    let required_blocks = ["#statement", "#intuition", "#proof"];
+    let mut missing_blocks = Vec::new();
+
+    for block in required_blocks {
+        if !body.contains(block) {
+            missing_blocks.push(block);
+        }
+    }
+
+    if !missing_blocks.is_empty() {
+        return Err(format!(
+            "Missing rigid blocks: {}. Every node must include a #statement[...], #intuition[...], and #proof[...] block.",
+            missing_blocks.join(", ")
+        ));
+    }
+
     let formatted = format!(
         "#{}\n(\n    id: \"{}\",\n    deps: [{}]\n)[\n{}\n]\n",
         node_type, id, deps_raw, body

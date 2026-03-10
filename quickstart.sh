@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Atlas Quick Start Script
-# This script automates the setup and running of Atlas
+# atlas Quick Start Script
+# This script automates the setup and running of atlas
 
 set -e
 
@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 
 print_header() {
     echo -e "${BLUE}╔════════════════════════════════════════════╗${NC}"
-    echo -e "${BLUE}║          Atlas Quick Start Script          ║${NC}"
+    echo -e "${BLUE}║          atlas Quick Start Script          ║${NC}"
     echo -e "${BLUE}╚════════════════════════════════════════════╝${NC}"
     echo
 }
@@ -57,6 +57,25 @@ check_requirements() {
     print_success "Git is installed"
 }
 
+check_github_token() {
+    print_step "Checking for GitHub API token..."
+    if [ -z "$GITHUB_TOKEN" ]; then
+        print_error "GITHUB_TOKEN environment variable is not set!"
+        echo
+        echo -e "${YELLOW}To use the automated PR pipeline, you need a GitHub Personal Access Token.${NC}"
+        echo "1. Go to https://github.com/settings/tokens"
+        echo "2. Click 'Generate new token (classic)'"
+        echo "3. Give it a note (e.g., 'atlas Bot') and check the 'repo' scope."
+        echo "4. Copy the token and export it in your terminal:"
+        echo
+        echo -e "   ${BLUE}export GITHUB_TOKEN=\"ghp_your_secret_token_here\"${NC}"
+        echo
+        echo "After exporting the token, run this script again."
+        exit 1
+    fi
+    print_success "GitHub token is configured"
+}
+
 build_compiler() {
     print_step "Building the compiler..."
     
@@ -91,24 +110,21 @@ compile_graph() {
 }
 
 start_server() {
-    print_step "Starting Atlas server..."
+    print_step "Starting atlas server..."
     echo
     echo -e "${YELLOW}╔════════════════════════════════════════════╗${NC}"
     echo -e "${YELLOW}║           Server is running!               ║${NC}"
     echo -e "${YELLOW}╠════════════════════════════════════════════╣${NC}"
     echo -e "${YELLOW}║                                            ║${NC}"
-    echo -e "${YELLOW}║  📊 Graph Viewer:                          ║${NC}"
-    echo -e "${YELLOW}║     http://127.0.0.1:3000/../public/       ║${NC}"
+    echo -e "${YELLOW}║  🖥️  Frontend (Run in a separate terminal): ║${NC}"
+    echo -e "${YELLOW}║     cd public && python3 -m http.server    ║${NC}"
+    echo -e "${YELLOW}║     Graph: http://localhost:8000           ║${NC}"
     echo -e "${YELLOW}║                                            ║${NC}"
-    echo -e "${YELLOW}║  📝 Submit Portal:                         ║${NC}"
-    echo -e "${YELLOW}║     http://127.0.0.1:3000/../public/submit.html ║${NC}"
-    echo -e "${YELLOW}║                                            ║${NC}"
-    echo -e "${YELLOW}║  🔌 API Endpoints:                         ║${NC}"
+    echo -e "${YELLOW}║  🔌 API Endpoints (Listening on 3000):     ║${NC}"
     echo -e "${YELLOW}║     POST /api/submit - Upload submissions  ║${NC}"
     echo -e "${YELLOW}║     GET  /api/graph  - Fetch graph data    ║${NC}"
     echo -e "${YELLOW}║                                            ║${NC}"
-    echo -e "${YELLOW}║  Press Ctrl+C to stop the server           ║${NC}"
-    echo -e "${YELLOW}║                                            ║${NC}"
+    echo -e "${YELLOW}║  Press Ctrl+C to stop the Rust backend     ║${NC}"
     echo -e "${YELLOW}╚════════════════════════════════════════════╝${NC}"
     echo
     
@@ -119,27 +135,30 @@ start_server() {
 run_demo() {
     print_step "Running submission demo..."
     
-    # Create a demo submission
     local demo_file="demo-submission.typ"
     
+    # Updated to match our rigid format constraints and routing tags!
     cat > "$demo_file" << 'EOF'
 // id: thm-demo-example
 // type: theorem
 // deps: []
+// tags: ["demo"]
 ---
 
-This is a demonstration submission created by the quick start script.
+#statement[
+    For any two real numbers $a$ and $b$, $(a + b)^2 = a^2 + 2a b + b^2$.
+]
 
-*Theorem:* For any two real numbers $a$ and $b$:
+#intuition[
+    This is the basic geometric expansion of a square with sides $a+b$.
+]
 
-$ (a + b)^2 = a^2 + 2ab + b^2 $
-
-*Proof:* Expand the left side directly by multiplication.
+#proof[
+    Expand the left side directly by multiplication.
+]
 EOF
     
     print_info "Created demo file: $demo_file"
-    
-    # Try to submit it (server should be running)
     print_step "Attempting to submit demo file..."
     
     if command -v curl &> /dev/null; then
@@ -149,10 +168,10 @@ EOF
         
         if echo "$response" | grep -q "success"; then
             print_success "Demo submission successful!"
-            print_info "Check math/submissions/thm-demo-example.typ"
+            print_info "Check math/demo/thm-demo-example.typ"
         else
-            print_info "Could not submit (is server running?)"
-            print_info "Try manually at: http://127.0.0.1:3000/../public/submit.html"
+            print_error "Server rejected it. Did you start the server first?"
+            print_info "Response: $response"
         fi
     fi
     
@@ -194,6 +213,7 @@ main() {
             print_success "Compilation complete!"
             ;;
         server)
+	    check_github_token
             start_server
             ;;
         demo)
@@ -202,6 +222,7 @@ main() {
             ;;
         full)
             check_requirements
+	    check_github_token
             build_compiler
             compile_graph
             start_server

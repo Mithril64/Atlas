@@ -28,30 +28,38 @@ Every `.typ` file submitted to Atlas must have a metadata header, a `---` separa
 | Field | Required | Description |
 |-------|----------|-------------|
 | `// id:` | ✅ | Unique kebab-case identifier. Convention: `{type}-{name}`, e.g. `thm-bolzano-weierstrass`, `def-prime` |
-| `// type:` | ✅ | One of: `theorem`, `lemma`, `definition`, `axiom`, `intuition`, `proof` |
+| `// type:` | ✅ | One of: `theorem`, `lemma`, `definition`, `axiom` |
 | `// deps:` | Optional | Comma-separated list of node IDs this depends on, e.g. `[def-group, ax-choice]` |
-| `// tags:` | Optional | Determines which subfolder the file is saved in. First tag = folder name |
+| `// tags:` | Optional | Determines which subfolder the file is saved in. First tag = folder name. Use `demo` to skip the PR pipeline during testing. |
 
 ## Body Blocks
 
 Use these macros inside the `---` body:
 
 | Macro | Purpose |
-|-------|---------|
+|-------|---------| 
 | `#statement[...]` | The main claim |
 | `#intuition[...]` | Informal explanation |
 | `#proof[...]` | Formal proof |
 | `#corollary[...]` | Derived result |
 | `#remark[...]` | Side note |
 
+All blocks are styled with the Dracula dark theme — previews and downloaded PDFs will both use the dark background.
+
 ## Submitting
 
-**Via the IDE** (`ide.html`): Write directly in the browser editor and click **Publish to Atlas**.
+**Via the IDE** (`ide.html`): Write directly in the browser editor and click **Publish to Atlas**. The IDE compiles a live preview as you type. You can also download the PDF before submitting.
 
 **Via the portal** (`submit.html`): Drag and drop a `.typ` file.
 
-Both routes POST to `http://127.0.0.1:3000/api/submit`. The server validates, saves, and opens a GitHub PR. Errors are shown verbatim.
+Both routes require you to **log in with GitHub** (button in the top-right of the nav). Your OAuth token is used to open the pull request on your behalf — the PR will appear under your GitHub account.
 
-## Local Preview
+Submissions with `tags: [demo]` skip the Git/PR step and just return success (useful for local testing without needing GitHub credentials).
 
-The IDE (`ide.html`) compiles your Typst live in-browser using a WASM build of the Typst compiler. You can preview and download a PDF before submitting.
+## What happens after you submit
+
+1. The server validates the metadata and file format
+2. A branch `submission-{id}-{timestamp}` is created and pushed
+3. A pull request is opened automatically on GitHub under your account
+4. Once the PR is merged, a GitHub Actions workflow deletes the submission branch automatically
+5. A maintainer runs `make compile` to regenerate the graph with your new node

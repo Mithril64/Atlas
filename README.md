@@ -11,11 +11,11 @@ Atlas represents theorems, lemmas, definitions, and axioms as nodes in an intera
 | Layer | Technology |
 |-------|------------|
 | Content | Typst `.typ` files |
-| Compiler | Rust (`typst-syntax` crate for AST parsing) |
-| Submission API | Axum HTTP server (local, `127.0.0.1:3000`) |
-| Graph viewer | `force-graph` JS library + HTMX |
+| Compiler + API | Rust (`axum`, `typst-syntax`, `reqwest`) |
+| Graph viewer | `force-graph` JS library |
 | IDE | Monaco Editor + `@myriaddreamin/typst.ts` (WASM) |
-| Styling | Vanilla CSS (Dracula-inspired dark theme) |
+| Auth | GitHub OAuth 2.0 (popup flow, `repo` scope) |
+| Styling | Vanilla CSS (Dracula dark theme) |
 
 ---
 
@@ -26,61 +26,67 @@ Full documentation is on the [GitHub Wiki](../../wiki):
 - **[Architecture](../../wiki/Architecture)** — system design and data flow
 - **[Contributing](../../wiki/Contributing)** — submission format and body macros
 - **[API Reference](../../wiki/API-Reference)** — REST endpoints
-- **[Deployment](../../wiki/Deployment)** — local setup and production install
+- **[Deployment](../../wiki/Deployment)** — local setup, public tunnel, and production
 
 ---
 
-## Running Locally
-
-### Prerequisites
-- [Rust](https://rustup.rs/) (stable)
-- [Typst CLI](https://github.com/typst/typst/releases) (`typst` in PATH)
-- Git (configured with push access for submissions to work)
-
-### 1. Compile the graph
+## Quick Start
 
 ```bash
-cd compiler
-cargo run --release
+# 1. Compile the math graph
+make compile
+
+# 2. Start the API server (local)
+make server
+
+# 3. Serve the frontend
+make serve
 ```
 
-Reads all `.typ` files in `../math/`, writes `../public/json/graph.json` and `../public/nodes/*.svg/.pdf`.
+See [Deployment](../../wiki/Deployment) for environment variable setup and the public tunnel workflow.
 
-### 2. Start the API server
+### Make targets
 
-```bash
-cd compiler
-cargo run --release -- server
-```
-
-Starts on `http://127.0.0.1:3000`. Required for the submit portal and IDE publish button.
-
-### 3. Serve the frontend
-
-Open `public/index.html` directly in a browser, or serve the `public/` directory with any static file server.
+| Target | Description |
+|--------|-------------|
+| `make build` | Debug build |
+| `make build-release` | Optimised release build |
+| `make test` | Run integration tests |
+| `make compile` | Compile `.typ` files → `graph.json` + SVG/PDF |
+| `make server` | API server on `127.0.0.1:3000` |
+| `make server-public` | API server on `0.0.0.0:3000` (tunnel/LAN) |
+| `make serve` | Frontend on `localhost:8000` |
+| `make tunnel` | ngrok tunnel with persistent static domain |
+| `make full` | First-time setup: build → compile → server |
 
 ---
 
 ## Environment
 
-The submission server requires a `GITHUB_TOKEN` env variable with repo write access to open pull requests on submission:
+Copy `compiler/.env.example` to `compiler/.env` and fill in your values. The server picks it up automatically on startup.
 
 ```bash
-export GITHUB_TOKEN=ghp_...
-cargo run --release -- server
+# GitHub OAuth App — "Atlas Dev" (local)
+GITHUB_CLIENT_ID=...
+GITHUB_CLIENT_SECRET=...
+
+# Fallback: server-side token used when no user OAuth token is present
+GITHUB_TOKEN=ghp_...
 ```
 
-Submissions tagged `// tags: [demo]` skip the Git/PR step and just return success (useful for local testing).
+For public/tunnel deployment, use `compiler/.env.public` with credentials for a separate "Atlas" OAuth App.
+
+Submissions tagged `// tags: [demo]` skip the Git/PR step entirely (useful for testing).
 
 ---
 
 ## Pages
 
-| Page | URL | Purpose |
-|------|-----|---------|
+| Page | File | Purpose |
+|------|------|---------|
 | Graph viewer | `index.html` | Browse the math graph |
 | Contributor portal | `submit.html` | Upload a `.typ` file |
-| IDE | `ide.html` | Write and preview Typst in-browser |
+| IDE | `ide.html` | Write, preview, and publish Typst in-browser |
 
 ---
 

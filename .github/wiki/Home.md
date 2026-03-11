@@ -4,7 +4,7 @@ Welcome to the Atlas developer documentation.
 
 | Page | Description |
 |------|-------------|
-| [Architecture](Architecture) | System design — content layer, Rust compiler, and frontend pages |
-| [Contributing](Contributing) | Submission format, metadata fields, body macros, and how to submit |
-| [API Reference](API-Reference) | REST API endpoints (`/api/graph`, `/api/submit`) |
-| [Deployment](Deployment) | Running locally and deploying to production |
+| [Architecture](Architecture) | System design — content layer, Rust compiler/auth, frontend pages |
+| [Contributing](Contributing) | Submission format, metadata, body macros, OAuth login, and PR flow |
+| [API Reference](API-Reference) | REST endpoints including OAuth auth routes |
+| [Deployment](Deployment) | Local setup, public tunnel (ngrok), and production install |

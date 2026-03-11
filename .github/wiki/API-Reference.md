@@ -1,6 +1,8 @@
 # Atlas API Reference
 
-Base URL: `http://127.0.0.1:3000` (local development only — no hosted API)
+Base URL (local): `http://127.0.0.1:3000`  
+Base URL (public tunnel): `https://alva-keyed-unexplainably.ngrok-free.dev`  
+Configured in `public/js/config.js` via `window.ATLAS_API_URL`.
 
 ---
 
@@ -33,7 +35,8 @@ Returns the compiled graph as a JSON array.
 Submit a new `.typ` file.
 
 **Content-Type:** `multipart/form-data`  
-**Field:** `file` — a `.typ` file
+**Field:** `file` — a `.typ` file  
+**Header (optional):** `Authorization: Bearer <github_oauth_token>` — if provided, the PR is opened on behalf of that user. Falls back to the server's `GITHUB_TOKEN` env var.
 
 **Success `200`** (non-demo submission):
 ```json
@@ -45,42 +48,44 @@ Submit a new `.typ` file.
 {"status": "success", "id": "thm-my-theorem"}
 ```
 
-**Error `400`** — plain text from the Rust validation step:
+**Error `400`** — validation failure (plain text):
 ```
 No id
-```
-```
-Validation failed: error: ...typst error...
+No type
 ```
 
 **Error `500`:**
 ```
 Git push failed
-GITHUB_TOKEN not set
+GitHub API error 404: Not Found
+No GitHub token — log in with GitHub to submit
 ```
+
+---
 
 ## GET `/api/auth/github`
 
-Initiates the GitHub OAuth flow. Redirects the browser to GitHub's authorization page requesting the `public_repo` scope.
+Initiates the GitHub OAuth flow. Redirects to GitHub's authorization page requesting the `repo` scope.
 
-**Required environment variables:** `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`  
+**Required env vars:** `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`  
 **Optional:** `GITHUB_REDIRECT_URL` (defaults to `http://127.0.0.1:3000/api/auth/callback`)
 
 ---
 
 ## GET `/api/auth/callback`
 
-OAuth callback. Exchanges the GitHub authorization `code` for an access token, then returns a minimal HTML page that calls `window.opener.postMessage({ type: 'github-auth', token: '...' }, '*')` and closes the popup.
+OAuth callback. Exchanges the authorization `code` for an access token, then returns a small HTML page that calls `window.opener.postMessage({ type: 'github-auth', token: '...' }, '*')` and closes the popup.
 
 **Query parameters:** `code`, `state`  
-**Success:** Returns HTML that passes the token back to the opener window.  
-**Failure:** Returns HTML that posts `{ type: 'github-auth-error', error: '...' }`.
+**Success:** Returns HTML that passes the token back to the opener and closes the window.  
+**Failure (bad code):** Posts `{ type: 'github-auth-error', error: '...' }`.  
+**Failure (missing env var):** Returns a human-readable config error page — does not panic.
 
 ---
 
 ## Notes
 
-- The server **does not** serve the static frontend — open `public/index.html` directly or use a separate static server.
-- CORS is `CorsLayer::permissive()` — fine for local use, restrict for public deployment.
-- **Authentication (OAuth):** If `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` are set, submissions will use the user's GitHub token if one is provided in the `Authorization: Bearer <token>` header. Falls back to `GITHUB_TOKEN` env var.
+- CORS is `CorsLayer::permissive()` — fine for local use; restrict for production.
+- Bind address is configurable: `SERVER_HOST` (default `127.0.0.1`), `SERVER_PORT` (default `3000`). `make server-public` sets `SERVER_HOST=0.0.0.0`.
+- Submissions with `tags: [demo]` skip the Git/PR pipeline entirely.
 - There is no rate limiting or file size limit currently implemented.

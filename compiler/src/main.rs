@@ -3,7 +3,6 @@ use std::path::Path;
 use std::process::Command;
 use typst_syntax::{parse, SyntaxKind, SyntaxNode};
 use serde::Serialize;
-use regex::Regex;
 use axum::{
     extract::Multipart,
     response::Json,
@@ -12,6 +11,9 @@ use axum::{
 };
 use tower_http::cors::CorsLayer;
 use std::env;
+use math_graph_compiler::ingest_submission;
+
+mod auth;
 
 #[derive(Debug, Serialize)]
 struct MathNode {
@@ -129,53 +131,9 @@ fn process_directory(dir: &Path, all_nodes: &mut Vec<MathNode>) {
     }
 }
 
-fn ingest_submission(raw_text: &str) -> Result<(String, String, String), String> {
-    let re_id = Regex::new(r"//\s*id:\s*([^\n\r]+)").unwrap();
-    let re_type = Regex::new(r"//\s*type:\s*([^\n\r]+)").unwrap();
-    let re_deps = Regex::new(r"//\s*deps:\s*\[([^\]]*)\]").unwrap();
-    let re_tags = Regex::new(r"//\s*tags:\s*\[([^\]]*)\]").unwrap();
-
-    let id = re_id.captures(raw_text).ok_or("No id")?
-        .get(1).map(|m| m.as_str().trim()).ok_or("Malformed id")?.to_string();
-    
-    let node_type = re_type.captures(raw_text).ok_or("No type")?
-        .get(1).map(|m| m.as_str().trim()).ok_or("Malformed type")?.to_string();
-    
-    // FIXED: Safely extract string references from original raw_text to satisfy borrow checker
-    let deps_raw = re_deps.captures(raw_text)
-        .and_then(|c| c.get(1))
-        .map(|m| m.as_str().trim())
-        .unwrap_or("");
-        
-    let tags_raw = re_tags.captures(raw_text)
-        .and_then(|c| c.get(1))
-        .map(|m| m.as_str().trim())
-        .unwrap_or("");
-
-    let mut primary_tag = "uncategorized".to_string();
-    if !tags_raw.is_empty() {
-        if let Some(first) = tags_raw.split(',').next() {
-            primary_tag = first.trim().trim_matches(|c| c == '"' || c == '\'' || c == '[' || c == ']').to_lowercase().replace(" ", "-");
-        }
-    }
-
-    let body = if let Some(pos) = raw_text.find("---") {
-        raw_text[pos + 3..].trim().to_string()
-    } else {
-        raw_text.trim().to_string()
-    };
-
-    let format_arr = |raw: &str| {
-        if raw.is_empty() { return "()".to_string(); }
-        let items: Vec<String> = raw.split(',').map(|s| format!("\"{}\"", s.trim().trim_matches(|c| c == '"' || c == '\'' || c == '[' || c == ']'))).collect();
-        format!("({},)", items.join(", "))
-    };
-
-    let formatted = format!("#{}(id:\"{}\",deps:{},tags:{})[\n{}\n]", node_type, id, format_arr(deps_raw), format_arr(tags_raw), body);
-    Ok((id, formatted, primary_tag))
-}
 
 fn main() {
+    dotenv::dotenv().ok();
     println!("Starting the atlas Compiler...");
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 && args[1] == "server" {
@@ -188,6 +146,7 @@ fn main() {
 #[tokio::main]
 async fn start_server() {
     let app = Router::new()
+        .nest("/api/auth", auth::auth_router())
         .route("/api/submit", post(upload_handler))
         .route("/api/graph", get(graph_handler))
         .layer(CorsLayer::permissive());
@@ -196,7 +155,11 @@ async fn start_server() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn upload_handler(mut multipart: Multipart) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, String)> {
+async fn upload_handler(headers: axum::http::HeaderMap, mut multipart: Multipart) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, String)> {
+    let auth_token = headers.get(axum::http::header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|s| s.strip_prefix("Bearer "))
+        .map(|s| s.to_string());
     while let Some(field) = multipart.next_field().await.map_err(|e| (axum::http::StatusCode::BAD_REQUEST, e.to_string()))? {
         if field.name() == Some("file") {
             let data = field.bytes().await.map_err(|e| (axum::http::StatusCode::BAD_REQUEST, e.to_string()))?;
@@ -218,7 +181,7 @@ async fn upload_handler(mut multipart: Multipart) -> Result<Json<serde_json::Val
                     Command::new("git").args(["checkout", "main"]).status().unwrap();
 
                     if push.is_ok() && push.unwrap().success() {
-                        let pr_url = create_github_pr(&branch, &id).await.map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e))?;
+                        let pr_url = create_github_pr(&branch, &id, auth_token.as_deref()).await.map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e))?;
                         return Ok(Json(serde_json::json!({"status": "success", "pr_url": pr_url})));
                     }
                     return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Git push failed".to_string()));
@@ -267,8 +230,11 @@ fn compile_all() {
     println!("atlas Compilation Successful!");
 }
 
-async fn create_github_pr(branch: &str, id: &str) -> Result<String, String> {
-    let token = env::var("GITHUB_TOKEN").map_err(|_| "GITHUB_TOKEN not set".to_string())?;
+async fn create_github_pr(branch: &str, id: &str, user_token: Option<&str>) -> Result<String, String> {
+    let token = user_token
+        .map(|s| s.to_string())
+        .or_else(|| env::var("GITHUB_TOKEN").ok())
+        .ok_or_else(|| "GITHUB_TOKEN not set and no user token provided".to_string())?;
     let url = "https://api.github.com/repos/Mithril64/Atlas/pulls";
     let client = reqwest::Client::new();
     let payload = serde_json::json!({"title": format!("atlas Submission: {}", id), "body": "Automated submission.", "head": branch, "base": "main"});

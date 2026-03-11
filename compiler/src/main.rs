@@ -235,7 +235,7 @@ fn compile_all() {
         Command::new("typst").args(["compile", "--root", "..", &temp_svg, &format!("../public/nodes/{}.svg", node.id)]).status().unwrap();
         let _ = fs::remove_file(&temp_svg);
 
-        let pdf_content = format!("#import \"../math/schema/math-graph.typ\": *\n#set page(width: auto, height: auto, margin: 20pt, fill: white)\n#set text(fill: black, size: 12pt)\n\n{}", node.body);
+        let pdf_content = format!("#import \"../math/schema/math-graph.typ\": *\n#set page(width: 595pt, height: auto, margin: (x: 56pt, y: 48pt), fill: rgb(\"#282a36\"))\n#set text(fill: rgb(\"#f8f8f2\"), size: 12pt)\n\n{}", node.body);
         let temp_pdf = format!(".temp_pdf_{}.typ", node.id);
         fs::write(&temp_pdf, &pdf_content).unwrap();
         let status = Command::new("typst").args(["compile", "--root", "..", &temp_pdf, &format!("../public/nodes/{}.pdf", node.id)]).status().unwrap();

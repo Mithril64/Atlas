@@ -129,7 +129,7 @@ UIController.init();
 let hoverNode = null;
 const neighbors = new Set();
 const neighborLinks = new Set();
-const searchFilteredNodes = new Set(); // Tracks nodes isolated by the command palette
+const searchFilteredNodes = new Set();
 let currentDimAlpha = 1.0; 
 let targetDimAlpha = 1.0;
 let animationFrameId = null;
@@ -162,7 +162,7 @@ async function initGraph() {
             id: node.id, 
             type: node.node_type,
             body: node.body,
-            tags: node.tags || [] // Added in case we use tags later
+            tags: node.tags || []
         }));
 
         const validNodeIds = new Set(nodes.map(n => n.id));
@@ -310,6 +310,33 @@ async function initGraph() {
                     return;
                 }
 
+                if (query.startsWith('deps:')) {
+                    const targetQuery = query.split(':')[1].trim();
+                    if (targetQuery) {
+                        const startNode = currentNodes.find(n => n.id.toLowerCase().includes(targetQuery));
+                        
+                        if (startNode) {
+                            const queue = [startNode.id];
+                            
+                            while (queue.length > 0) {
+                                const currentId = queue.shift();
+                                
+                                if (!searchFilteredNodes.has(currentId)) {
+                                    searchFilteredNodes.add(currentId);
+                                    
+                                    const nodeObj = currentNodes.find(n => n.id === currentId);
+                                    if (nodeObj && nodeObj.deps) {
+                                        nodeObj.deps.forEach(dep => queue.push(dep));
+                                    }
+                                }
+                            }
+                        }
+                        Graph.nodeColor(Graph.nodeColor()); // Force WebGL update
+                    }
+                    searchResults.classList.remove('visible'); 
+                    return; 
+                }
+
                 // --- STANDARD SEARCH (Dropdown) ---
                 const matches = currentNodes.filter(n => {
                     const cleanName = n.id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
@@ -403,7 +430,7 @@ async function initGraph() {
         }
 
     } catch (error) {
-        console.error("Failed to load or parse graph.json in Atlas:", error);
+        console.error("Failed to load or parse graph.json in atlas:", error);
     }
 }
 

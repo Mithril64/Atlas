@@ -133,7 +133,17 @@ fn process_directory(dir: &Path, all_nodes: &mut Vec<MathNode>) {
 
 
 fn main() {
-    dotenv::dotenv().ok();
+    // Load .env.public when running in public mode, .env otherwise.
+    // Override by setting DOTENV_FILE=path before launching.
+    let dotenv_file = std::env::var("DOTENV_FILE").unwrap_or_else(|_| {
+        if std::env::var("SERVER_HOST").as_deref() == Ok("0.0.0.0") {
+            ".env.public".to_string()
+        } else {
+            ".env".to_string()
+        }
+    });
+    dotenv::from_filename(&dotenv_file).ok();
+    dotenv::dotenv().ok(); // fallback: also load .env so local vars still work
     println!("Starting the atlas Compiler...");
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 && args[1] == "server" {
@@ -145,13 +155,18 @@ fn main() {
 
 #[tokio::main]
 async fn start_server() {
+    let host = env::var("SERVER_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let port = env::var("SERVER_PORT").unwrap_or_else(|_| "3000".to_string());
+    let addr = format!("{}:{}", host, port);
+
     let app = Router::new()
         .nest("/api/auth", auth::auth_router())
         .route("/api/submit", post(upload_handler))
         .route("/api/graph", get(graph_handler))
         .layer(CorsLayer::permissive());
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await.unwrap();
-    println!("✓ Server running on http://127.0.0.1:3000");
+    let listener = tokio::net::TcpListener::bind(&addr).await
+        .unwrap_or_else(|e| panic!("Failed to bind to {}: {}", addr, e));
+    println!("✓ Server running on http://{}", addr);
     axum::serve(listener, app).await.unwrap();
 }
 
@@ -234,13 +249,31 @@ async fn create_github_pr(branch: &str, id: &str, user_token: Option<&str>) -> R
     let token = user_token
         .map(|s| s.to_string())
         .or_else(|| env::var("GITHUB_TOKEN").ok())
-        .ok_or_else(|| "GITHUB_TOKEN not set and no user token provided".to_string())?;
+        .ok_or_else(|| "No GitHub token — log in with GitHub to submit".to_string())?;
     let url = "https://api.github.com/repos/Mithril64/Atlas/pulls";
     let client = reqwest::Client::new();
     let payload = serde_json::json!({"title": format!("atlas Submission: {}", id), "body": "Automated submission.", "head": branch, "base": "main"});
-    let res = client.post(url).header("Authorization", format!("Bearer {}", token)).header("User-Agent", "atlas-bot").json(&payload).send().await.map_err(|e| e.to_string())?;
-    if res.status().is_success() {
-        let json: serde_json::Value = res.json().await.unwrap();
-        Ok(json["html_url"].as_str().unwrap().to_string())
-    } else { Err(res.text().await.unwrap()) }
+    let res = client.post(url)
+        .header("Authorization", format!("Bearer {}", token))
+        .header("User-Agent", "atlas-bot")
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = res.status();
+    let body = res.text().await.unwrap_or_default();
+
+    if status.is_success() {
+        let json: serde_json::Value = serde_json::from_str(&body).unwrap_or_default();
+        Ok(json["html_url"].as_str().unwrap_or_default().to_string())
+    } else {
+        // Try to extract a human-readable message from GitHub's JSON error body
+        let msg = serde_json::from_str::<serde_json::Value>(&body)
+            .ok()
+            .and_then(|j| j["message"].as_str().map(|s| s.to_string()))
+            .unwrap_or_else(|| body.clone());
+        eprintln!("GitHub PR creation failed: HTTP {} — {}", status, body);
+        Err(format!("GitHub API error {}: {}", status.as_u16(), msg))
+    }
 }

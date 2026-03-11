@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>atlas IDE</title>
+    <link rel="stylesheet" href="./css/submit.css">
+    <link rel="stylesheet" href="./css/ide.css">
+    <!-- Monaco Editor Scripts -->
+    <script>var require = { paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } };</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.nls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.js"></script>
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="index.html" class="back-link">← Back to Graph</a>
+    </nav>
+
+    <div class="ide-container">
+        <div id="editor-container"></div>
+
+        <div id="preview-pane">
+            <div class="preview-loading">Loading WASM Compiler...</div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span id="compiler-status" class="status-loading">WASM: Initializing...</span>
+        <div class="button-group ide-actions">
+            <button class="btn-clear" id="btn-download-typ">Download Typst</button>
+            <button class="btn-clear" id="btn-download-pdf">Download PDF</button>
+            <button class="btn-submit" id="btn-publish">Publish to Atlas</button>
+        </div>
+    </div>
+    <div id="ide-status-message"></div>
+
+    <script type="module" src="./js/ide.js"></script>
+</body>
+</html>

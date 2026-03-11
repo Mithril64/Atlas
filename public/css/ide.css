@@ -1,0 +1,134 @@
+/* --- No-scroll full-viewport layout --- */
+html, body {
+    height: 100%;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Shrink the top-nav so it doesn't eat into the editor space */
+.top-nav {
+    padding: 12px 24px;
+    flex-shrink: 0;
+}
+
+/* --- IDE Grid --- */
+.ide-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 0 20px;
+    /* Fill all remaining height between the nav and status bar */
+    flex: 1 1 0;
+    min-height: 0; /* important: allows flex child to shrink */
+}
+
+#editor-container {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    min-height: 0;
+}
+
+#preview-pane {
+    background: #282a36;
+    color: #f8f8f2;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+    min-height: 0;
+}
+
+#preview-pane svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.preview-loading {
+    color: #666;
+    margin-top: 20px;
+}
+
+/* --- Status Bar --- */
+.status-bar {
+    padding: 12px 20px;
+    flex-shrink: 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    margin-top: 12px;
+}
+
+.ide-actions {
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.ide-actions button {
+    flex: none;
+    padding: 7px 16px;
+    font-size: 0.85rem;
+}
+
+/* --- Compiler State Colors --- */
+.status-ready   { color: var(--accent-green); }
+.status-loading { color: var(--accent-cyan); }
+.status-error   { color: var(--accent-red); }
+
+/* --- Floating Publish Toast --- */
+#ide-status-message {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    z-index: 9999;
+    min-width: 320px;
+    max-width: 560px;
+    padding: 14px 20px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#ide-status-message.show {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+}
+
+#ide-status-message.success {
+    background: rgba(80, 250, 123, 0.12);
+    color: var(--accent-green);
+    border: 1px solid var(--accent-green);
+}
+
+#ide-status-message.error {
+    background: rgba(255, 85, 85, 0.12);
+    color: var(--accent-red);
+    border: 1px solid var(--accent-red);
+}
+
+#ide-status-message.loading {
+    background: rgba(139, 233, 253, 0.10);
+    color: var(--accent-cyan);
+    border: 1px solid var(--accent-cyan);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}

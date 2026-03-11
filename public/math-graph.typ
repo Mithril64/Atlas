@@ -1,0 +1,1 @@
+/home/mithril/code/Atlas/math/schema/math-graph.typ

@@ -1,35 +1,41 @@
 [
   {
-    "id": "thm-bolzano",
+    "id": "thm-pythagorean",
     "node_type": "theorem",
     "deps": [
-      "def-bounded",
-      "thm-monotone"
+      "def-right-triangle",
+      "ax-euclidean-geometry"
     ],
-    "tags": [],
-    "body": "Every bounded sequence has a convergent subsequence. aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    "tags": [
+      "geometry",
+      "foundations"
+    ],
+    "body": "#statement[\n  In a right-angled triangle, the square of the hypotenuse is equal to the sum of the squares of the other two sides: $a^2 + b^2 = c^2$.\n]\n\n#intuition[\n  The area of the square built on the long side is exactly equal to the total area of the squares built on the two shorter sides.\n]\n\n#proof[\n  Consider four copies of the right triangle arranged inside a larger square of side $a+b$. The inner square formed has area $c^2$...\n]"
   },
   {
-    "id": "def-group",
+    "id": "def-cyclic-group",
     "node_type": "definition",
     "deps": [
-      "def-set",
-      "def-binary-operation"
+      "def-group",
+      "def-element-order"
     ],
     "tags": [
       "algebra",
       "group-theory"
     ],
-    "body": "A group is a set $G$ equipped with a binary operation $*$ that satisfies closure, associativity, identity, and invertibility."
+    "body": "#statement[\n  A group $G$ is cyclic if there exists an element $g in G$ such that $G = angle.l g angle.r$.\n]\n\n#intuition[\n  A cyclic group is \"unidimensional\" in the sense that every single element can be reached just by repeating one specific generator.\n]\n\n#proof[\n  This is a definition; no proof is required. However, for the atlas rigid block requirement, we note that the existence of such a generator defines the group structure.\n]"
   },
   {
-    "id": "ax-group-associativity",
-    "node_type": "axiom",
-    "deps": [],
-    "tags": [
-      "algebra",
-      "group-theory"
+    "id": "thm-bolzano-weierstrass",
+    "node_type": "theorem",
+    "deps": [
+      "def-bounded-sequence",
+      "def-subsequence"
     ],
-    "body": "For all $a, b, c in G$, the equation $(a * b) * c = a * (b * c)$ holds valid."
+    "tags": [
+      "analysis",
+      "topology"
+    ],
+    "body": "#statement[\n  Every bounded sequence in $RR^n$ has a convergent subsequence.\n]\n\n#intuition[\n  If you have an infinite number of points trapped in a finite box, they have to \"pile up\" somewhere.\n]\n\n#proof[\n  By the method of bisection. Since the sequence is bounded, it lies in a compact interval $[a, b]$. Subdivide the interval...\n]"
   }
 ]

@@ -209,6 +209,30 @@ html, body {
     bottom: 24px;
     right: 24px;
     z-index: 500;
+    display: flex;
+    gap: 10px;
+}
+
+#ide-btn {
+    display: inline-block;
+    padding: 8px 18px;
+    background-color: rgba(40, 42, 54, 0.7);
+    color: #6272a4;
+    text-decoration: none;
+    font-family: sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: 1px solid #44475a;
+    border-radius: 20px;
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+}
+
+#ide-btn:hover {
+    color: #bd93f9;
+    border-color: #bd93f9;
+    background-color: rgba(40, 42, 54, 1);
+    box-shadow: 0 0 12px rgba(189, 147, 249, 0.2);
 }
 
 #contribute-btn {

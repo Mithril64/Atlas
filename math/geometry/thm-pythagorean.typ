@@ -1,8 +1,7 @@
-#theorem
-(
+#theorem(
     id: "thm-pythagorean",
-    deps: [def-right-triangle],
-    tags: ["geometry", "euclidean"]
+    deps: ("def-right-triangle",),
+    tags: ("geometry", "euclidean",)
 )[
 #statement[
   In a right-angled triangle, the square of the length of the hypotenuse $c$ is equal to the sum of the squares of the lengths of the other two sides $a$ and $b$:

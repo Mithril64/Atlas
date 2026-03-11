@@ -9,6 +9,9 @@ const statusMessage = document.getElementById('status-message');
 
 let selectedFile = null;
 
+// Auth is loaded as a separate <script defer> before this one — setupAuth/getAuthToken are globals
+setupAuth('btn-login-github', 'auth-status');
+
 // Click to select file
 dropZone.addEventListener('click', () => fileInput.click());
 
@@ -79,10 +82,17 @@ btnSubmit.addEventListener('click', async () => {
         const formData = new FormData();
         formData.append('file', file);
 
+        const headers = {};
+        const token = getAuthToken();
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         try {
-            const response = await fetch('http://127.0.0.1:3000/api/submit', {
+            const response = await fetch(`${window.ATLAS_API_URL}/api/submit`, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                headers,
             });
 
             // 1. Read the raw text first so we don't crash on plain-text errors

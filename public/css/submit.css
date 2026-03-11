@@ -23,7 +23,10 @@ body {
 
 /* --- Navigation --- */
 .top-nav {
-    padding: 20px 40px;
+    padding: 12px 32px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
 }
 
 .back-link {
@@ -36,6 +39,39 @@ body {
 
 .back-link:hover {
     color: var(--text-main);
+}
+
+/* Right-side auth cluster in the nav bar */
+.nav-auth {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.auth-status {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.btn-nav-auth {
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-main);
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    white-space: nowrap;
+    flex: none;
+}
+
+.btn-nav-auth:hover {
+    border-color: var(--accent-purple);
+    background: rgba(189, 147, 249, 0.08);
+    color: var(--accent-purple);
 }
 
 /* --- Layout --- */

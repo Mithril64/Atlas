@@ -13,6 +13,9 @@ let compileTimeout;
 let $typst = null;
 let mathSchemaCode = null;
 
+// auth.js is loaded as a separate <script> before this module — setupAuth/getAuthToken are globals
+setupAuth('btn-login-github', 'auth-status');
+
 function setStatus(message, className) {
     status.textContent = message;
     status.className   = className;
@@ -328,10 +331,17 @@ btnPublish.addEventListener('click', async () => {
     btnPublish.textContent = 'Publishing...';
     showIdeStatus('loading', '<span class="loading-spinner"></span> Submitting to Atlas...');
 
+    const headers = {};
+    const token = getAuthToken();
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
     try {
-        const response = await fetch('http://127.0.0.1:3000/api/submit', {
+        const response = await fetch(`${window.ATLAS_API_URL}/api/submit`, {
             method: 'POST',
-            body: formData
+            body: formData,
+            headers,
         });
 
         const rawText = await response.text();

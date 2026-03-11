@@ -1,18 +1,5 @@
 [
   {
-    "id": "thm-pythagorean",
-    "node_type": "theorem",
-    "deps": [
-      "def-right-triangle",
-      "ax-euclidean-geometry"
-    ],
-    "tags": [
-      "geometry",
-      "foundations"
-    ],
-    "body": "#statement[\n  In a right-angled triangle, the square of the hypotenuse is equal to the sum of the squares of the other two sides: $a^2 + b^2 = c^2$.\n]\n\n#intuition[\n  The area of the square built on the long side is exactly equal to the total area of the squares built on the two shorter sides.\n]\n\n#proof[\n  Consider four copies of the right triangle arranged inside a larger square of side $a+b$. The inner square formed has area $c^2$...\n]"
-  },
-  {
     "id": "def-cyclic-group",
     "node_type": "definition",
     "deps": [

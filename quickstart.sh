@@ -58,22 +58,37 @@ check_requirements() {
 }
 
 check_github_token() {
-    print_step "Checking for GitHub API token..."
-    if [ -z "$GITHUB_TOKEN" ]; then
-        print_error "GITHUB_TOKEN environment variable is not set!"
+    print_step "Checking for GitHub credentials..."
+    if [ -z "$GITHUB_TOKEN" ] && [ -z "$GITHUB_CLIENT_ID" ]; then
+        print_info "Neither GITHUB_TOKEN nor GITHUB_CLIENT_ID is set."
         echo
-        echo -e "${YELLOW}To use the automated PR pipeline, you need a GitHub Personal Access Token.${NC}"
-        echo "1. Go to https://github.com/settings/tokens"
-        echo "2. Click 'Generate new token (classic)'"
-        echo "3. Give it a note (e.g., 'atlas Bot') and check the 'repo' scope."
-        echo "4. Copy the token and export it in your terminal:"
+        echo -e "${YELLOW}For GitHub OAuth login (recommended):${NC}"
+        echo "  Register an OAuth App at https://github.com/settings/developers"
+        echo "  Set callback URL to: http://127.0.0.1:3000/api/auth/callback"
+        echo -e "  ${BLUE}export GITHUB_CLIENT_ID=\"your_id\"${NC}"
+        echo -e "  ${BLUE}export GITHUB_CLIENT_SECRET=\"your_secret\"${NC}"
         echo
-        echo -e "   ${BLUE}export GITHUB_TOKEN=\"ghp_your_secret_token_here\"${NC}"
+        echo -e "${YELLOW}Or use a server-side token (no user login):${NC}"
+        echo -e "  ${BLUE}export GITHUB_TOKEN=\"ghp_your_token\"${NC}"
         echo
-        echo "After exporting the token, run this script again."
+        echo "Continuing — demo submissions work without credentials."
+        echo
+    else
+        print_success "GitHub credentials configured"
+    fi
+}
+
+run_tests() {
+    print_step "Running integration test suite..."
+    cd compiler
+    if cargo test 2>&1; then
+        print_success "All tests passed"
+    else
+        print_error "Tests failed"
+        cd ..
         exit 1
     fi
-    print_success "GitHub token is configured"
+    cd ..
 }
 
 build_compiler() {
@@ -183,16 +198,19 @@ show_help() {
     echo "Usage: $0 [COMMAND]"
     echo
     echo "Commands:"
-    echo "  build      Build the compiler (required first time)"
-    echo "  compile    Compile the math graph"
-    echo "  server     Start the web server"
-    echo "  demo       Run a demo submission"
-    echo "  full       Do everything: build, compile, and start server"
+    echo "  build      Build the compiler (debug)"
+    echo "  release    Build the compiler (optimised release)"
+    echo "  test       Run the full integration test suite"
+    echo "  compile    Compile the math graph (graph.json + SVG/PDF)"
+    echo "  server     Start the API server (port 3000)"
+    echo "  demo       Submit a demo .typ file to a running server"
+    echo "  full       First-time setup: build → compile → server"
     echo "  help       Show this help message"
     echo
     echo "Examples:"
     echo "  $0 full       # First-time setup and start server"
-    echo "  $0 server     # Start server (after initial setup)"
+    echo "  $0 test       # Run all tests"
+    echo "  $0 server     # Start server (after initial build)"
     echo "  $0 build      # Just build the compiler"
     echo
 }
@@ -208,12 +226,22 @@ main() {
             build_compiler
             print_success "Build complete!"
             ;;
+        release)
+            check_requirements
+            print_step "Building release binary..."
+            cd compiler && cargo build --release && cd ..
+            print_success "Release build complete!"
+            ;;
+        test)
+            check_requirements
+            run_tests
+            ;;
         compile)
             compile_graph
             print_success "Compilation complete!"
             ;;
         server)
-	    check_github_token
+            check_github_token
             start_server
             ;;
         demo)
@@ -222,7 +250,7 @@ main() {
             ;;
         full)
             check_requirements
-	    check_github_token
+            check_github_token
             build_compiler
             compile_graph
             start_server

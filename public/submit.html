@@ -5,11 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Atlas | Contribute</title>
     <link rel="stylesheet" href="css/submit.css">
+    <script src="js/config.js"></script>
+    <script src="js/auth.js" defer></script>
     <script src="js/submit.js" defer></script>
 </head>
 <body>
     <nav class="top-nav">
         <a href="index.html" class="back-link">&larr; Back to Graph</a>
+        <div class="nav-auth">
+            <span id="auth-status" class="auth-status"></span>
+            <button class="btn-nav-auth" id="btn-login-github">Login with GitHub</button>
+        </div>
     </nav>
 
     <div class="submit-container">

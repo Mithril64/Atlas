@@ -24,8 +24,24 @@ Then open `public/index.html` in a browser (any static server or directly from d
 ### Environment variables
 
 ```bash
-export GITHUB_TOKEN=ghp_...   # Required for PR creation on submission
+# Required for PR creation when no user OAuth token is provided
+export GITHUB_TOKEN=ghp_...
+
+# Required for GitHub OAuth login (register an OAuth App on github.com/settings/developers)
+export GITHUB_CLIENT_ID=your_client_id
+export GITHUB_CLIENT_SECRET=your_client_secret
+# Callback URL must match what's registered in your OAuth App:
+export GITHUB_REDIRECT_URL=http://127.0.0.1:3000/api/auth/callback
 ```
+
+### Running Tests
+
+```bash
+cd compiler && cargo test
+```
+
+20 unit tests covering `ingest_submission` (happy paths, edge cases, error conditions). No external services required.
+
 
 ---
 

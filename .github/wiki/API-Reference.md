@@ -59,10 +59,28 @@ Git push failed
 GITHUB_TOKEN not set
 ```
 
+## GET `/api/auth/github`
+
+Initiates the GitHub OAuth flow. Redirects the browser to GitHub's authorization page requesting the `public_repo` scope.
+
+**Required environment variables:** `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`  
+**Optional:** `GITHUB_REDIRECT_URL` (defaults to `http://127.0.0.1:3000/api/auth/callback`)
+
+---
+
+## GET `/api/auth/callback`
+
+OAuth callback. Exchanges the GitHub authorization `code` for an access token, then returns a minimal HTML page that calls `window.opener.postMessage({ type: 'github-auth', token: '...' }, '*')` and closes the popup.
+
+**Query parameters:** `code`, `state`  
+**Success:** Returns HTML that passes the token back to the opener window.  
+**Failure:** Returns HTML that posts `{ type: 'github-auth-error', error: '...' }`.
+
 ---
 
 ## Notes
 
-- The server **does not** serve the static frontend files — open `public/index.html` directly or use a separate static server.
-- CORS is set to `CorsLayer::permissive()` — fine for local use, should be restricted for any public deployment.
-- There is no authentication, rate limiting, or file size limit currently implemented.
+- The server **does not** serve the static frontend — open `public/index.html` directly or use a separate static server.
+- CORS is `CorsLayer::permissive()` — fine for local use, restrict for public deployment.
+- **Authentication (OAuth):** If `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` are set, submissions will use the user's GitHub token if one is provided in the `Authorization: Bearer <token>` header. Falls back to `GITHUB_TOKEN` env var.
+- There is no rate limiting or file size limit currently implemented.

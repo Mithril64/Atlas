@@ -1,0 +1,35 @@
+[
+  {
+    "id": "thm-bolzano",
+    "node_type": "theorem",
+    "deps": [
+      "def-bounded",
+      "thm-monotone"
+    ],
+    "tags": [],
+    "body": "Every bounded sequence has a convergent subsequence. aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+    "id": "def-group",
+    "node_type": "definition",
+    "deps": [
+      "def-set",
+      "def-binary-operation"
+    ],
+    "tags": [
+      "algebra",
+      "group-theory"
+    ],
+    "body": "A group is a set $G$ equipped with a binary operation $*$ that satisfies closure, associativity, identity, and invertibility."
+  },
+  {
+    "id": "ax-group-associativity",
+    "node_type": "axiom",
+    "deps": [],
+    "tags": [
+      "algebra",
+      "group-theory"
+    ],
+    "body": "For all $a, b, c in G$, the equation $(a * b) * c = a * (b * c)$ holds valid."
+  }
+]

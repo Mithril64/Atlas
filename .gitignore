@@ -2,7 +2,6 @@
 # 1. The Build Output (Generated Data)
 # =========================
 public/compiled/
-public/json/graph.json
 
 # =========================
 # 2. Rust & Compiler (Cargo)

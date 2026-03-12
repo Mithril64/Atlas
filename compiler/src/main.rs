@@ -133,17 +133,31 @@ fn process_directory(dir: &Path, all_nodes: &mut Vec<MathNode>) {
 
 
 fn main() {
-    // Load .env.public when running in public mode, .env otherwise.
-    // Override by setting DOTENV_FILE=path before launching.
-    let dotenv_file = std::env::var("DOTENV_FILE").unwrap_or_else(|_| {
-        if std::env::var("SERVER_HOST").as_deref() == Ok("0.0.0.0") {
-            ".env.public".to_string()
-        } else {
-            ".env".to_string()
+    let mut public_loaded = false;
+    if std::env::var("SERVER_HOST").as_deref() == Ok("0.0.0.0") || std::env::var("DOTENV_FILE").as_deref() == Ok(".env.public") {
+        if let Ok(content) = std::fs::read_to_string(".env.public") {
+            for line in content.lines() {
+                let trimmed = line.trim();
+                // ignore comments and empty lines
+                if trimmed.is_empty() || trimmed.starts_with('#') { continue; }
+                if let Some((k, v)) = trimmed.split_once('=') {
+                    std::env::set_var(k.trim(), v.trim());
+                }
+            }
+            public_loaded = true;
+            println!("Loaded .env.public config (overriding cargo defaults)");
         }
-    });
-    dotenv::from_filename(&dotenv_file).ok();
-    dotenv::dotenv().ok(); // fallback: also load .env so local vars still work
+    }
+    
+    // If public config wasn't requested or failed to load, load local .env.
+    // We don't load both because dotenv() does not overwrite existing vars,
+    // so loading .env after .env.public would be safe but confusing if they mix.
+    if !public_loaded {
+        let dotenv_file = std::env::var("DOTENV_FILE").unwrap_or_else(|_| ".env".to_string());
+        if dotenv::from_filename(&dotenv_file).is_ok() {
+            println!("Loaded {} config", dotenv_file);
+        }
+    }
     println!("Starting the atlas Compiler...");
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 && args[1] == "server" {

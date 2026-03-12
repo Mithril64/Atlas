@@ -74,6 +74,31 @@ body {
     color: var(--accent-purple);
 }
 
+/* Profile state for nav auth button */
+.btn-nav-auth.btn-profile {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 220px;
+    overflow: hidden;
+}
+
+.btn-nav-auth.btn-profile span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nav-avatar {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    border-radius: 999px;
+    object-fit: cover;
+    display: block;
+}
+
 /* --- Layout --- */
 .submit-container {
     max-width: 1400px;
@@ -157,6 +182,12 @@ body {
 
 .format-example .comment { color: var(--text-muted); }
 .format-example .keyword { color: var(--accent-purple); }
+
+.format-divider {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 15px 0;
+}
 
 /* --- Help List --- */
 .help-section h3 {

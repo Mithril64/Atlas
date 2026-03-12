@@ -349,11 +349,11 @@ async function initGraph() {
                     matches.forEach((node, index) => {
                         const li = document.createElement('li');
                         const cleanName = node.id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
-                        const badgeColor = typeColors[node.type] || '#6272a4';
+                        const typeClass = typeColors[node.type] ? node.type : 'default';
                         
                         li.innerHTML = `
                             <span>${cleanName.charAt(0).toUpperCase() + cleanName.slice(1)}</span>
-                            <span class="search-match-type" style="background-color: ${badgeColor}; color: #282a36;">${node.type}</span>
+                            <span class="search-match-type match-type-${typeClass}">${node.type}</span>
                         `;
                         
                         li.addEventListener('click', () => {
@@ -434,4 +434,5 @@ async function initGraph() {
     }
 }
 
+setupAuth('btn-login-github', 'auth-status');
 initGraph();

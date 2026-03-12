@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atlas - Profile</title>
+    
+    <link rel="stylesheet" href="css/submit.css">
+    <link rel="stylesheet" href="css/profile.css">
+</head>
+<body>
+    <nav class="top-nav">
+        <a href="index.html" class="back-link">← Back to Atlas</a>
+    </nav>
+    <div class="profile-page-container">
+        <div class="profile-page-header">
+            <img id="profile-page-avatar" src="" alt="Avatar">
+            <h2 id="profile-page-username">Loading...</h2>
+        </div>
+        <div class="profile-stats-grid">
+            <div class="stat-card">
+                <span class="stat-val" id="profile-page-commits">0</span>
+                <span class="stat-lbl">Commits</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-val" id="profile-page-reviews">0</span>
+                <span class="stat-lbl">Reviews</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-val trust" id="profile-page-trust">1</span>
+                <span class="stat-lbl">Trust</span>
+            </div>
+        </div>
+        <section class="contrib-section">
+            <h3 class="contrib-title">Contributions in the last year</h3>
+            <div id="contrib-graph" class="contrib-graph" aria-label="Contribution graph"></div>
+            <div class="contrib-legend">
+                <span>Less</span>
+                <div class="legend-box level-0"></div>
+                <div class="legend-box level-1"></div>
+                <div class="legend-box level-2"></div>
+                <div class="legend-box level-3"></div>
+                <div class="legend-box level-4"></div>
+                <span>More</span>
+            </div>
+        </section>
+        <button id="profile-page-logout" class="logout-btn-large">Log Out</button>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/profile.js"></script>
+</body>
+</html>

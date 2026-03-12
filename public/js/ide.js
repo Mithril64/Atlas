@@ -74,7 +74,7 @@ async function initCompiler() {
     } catch (error) {
         console.error("Failed to load Typst WASM:", error);
         setStatus("WASM: Failed to load", "status-error");
-        preview.innerHTML = `<div class="preview-loading" style="color:var(--accent-red)">
+        preview.innerHTML = `<div class="preview-loading error">
             Compilation engine failed to load. Check the console.
         </div>`;
     }

@@ -56,6 +56,10 @@ html, body {
     margin-top: 20px;
 }
 
+.preview-loading.error {
+    color: var(--accent-red);
+}
+
 /* --- Status Bar --- */
 .status-bar {
     padding: 12px 20px;

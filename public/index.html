@@ -9,9 +9,17 @@
     <script src="https://unpkg.com/force-graph"></script>
     
     <link rel="stylesheet" href="css/style.css">
+    <script src="js/config.js"></script>
+    <script src="js/auth.js" defer></script>
     <script src="js/app.js" defer></script>
 </head>
 <body>
+    <nav class="top-nav index-nav">
+        <div class="nav-auth">
+            <span id="auth-status" class="auth-status"></span>
+            <button class="btn-nav-auth" id="btn-login-github">Login with GitHub</button>
+        </div>
+    </nav>
     <div id="graph-container"></div>
 
     <div id="search-container">
@@ -60,5 +68,6 @@
         <a href="ide.html" id="ide-btn">Open IDE</a>
         <a href="submit.html" id="contribute-btn">Contribute a Node</a>
     </div>
+
 </body>
 </html>

@@ -15,6 +15,14 @@ html, body {
 }
 
 /* --- Search Interface --- */
+.index-nav {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 100;
+    padding: 15px;
+}
+
 #search-container {
     position: absolute;
     top: 24px;
@@ -95,6 +103,13 @@ html, body {
     text-transform: uppercase;
     color: #282a36;
 }
+
+.match-type-axiom { background-color: #ff5555; color: #282a36; }
+.match-type-definition { background-color: #ffb86c; color: #282a36; }
+.match-type-lemma { background-color: #8be9fd; color: #282a36; }
+.match-type-theorem { background-color: #bd93f9; color: #282a36; }
+.match-type-ghost { background-color: rgba(68, 71, 90, 0.6); color: #282a36; }
+.match-type-default { background-color: #6272a4; color: #282a36; }
 
 /* --- Side Panel UI --- */
 #side-panel {
@@ -356,4 +371,171 @@ pre {
     margin-bottom: 20px;
     display: flex;
     gap: 10px;
+}
+
+/* --- Auth & Profile --- */
+.nav-auth {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.auth-status {
+    font-size: 0.9rem;
+}
+
+.btn-nav-auth {
+    background-color: transparent;
+    border: 1px solid #44475a;
+    color: #f8f8f2;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-nav-auth:hover {
+    background-color: #44475a;
+    border-color: #6272a4;
+}
+
+.btn-profile {
+    background-color: #282a36;
+    border-color: #bd93f9;
+}
+
+.btn-profile:hover {
+    background-color: #44475a;
+}
+
+.nav-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* --- Profile Modal --- */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-modal-content {
+    background: #282a36;
+    width: 400px;
+    max-width: 90%;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    border: 1px solid #44475a;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.close-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: #6272a4;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-btn:hover {
+    color: #ff5555;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+#profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 2px solid #bd93f9;
+    object-fit: cover;
+}
+
+.profile-info h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #f8f8f2;
+}
+
+.profile-stats {
+    display: flex;
+    justify-content: space-between;
+    background: #1e1f29;
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px solid #44475a;
+}
+
+.stat-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+}
+
+.relative-box {
+    position: relative;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #8be9fd;
+}
+
+#stat-trust {
+    color: #50fa7b;
+}
+
+.hidden-modal {
+    display: none !important;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #6272a4;
+    text-transform: uppercase;
+    margin-top: 5px;
+    letter-spacing: 0.5px;
+}
+
+.btn-logout {
+    background: rgba(255, 85, 85, 0.1);
+    color: #ff5555;
+    border: 1px solid #ff5555;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.btn-logout:hover {
+    background: #ff5555;
+    color: #f8f8f2;
 }

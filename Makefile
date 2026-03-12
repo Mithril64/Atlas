@@ -33,7 +33,7 @@ server:
 
 ## Start the Axum API on 0.0.0.0:3000 (LAN / hosting — pairs with `make tunnel`)
 server-public:
-	SERVER_HOST=0.0.0.0 cd compiler && cargo run --release -- server
+	cd compiler && SERVER_HOST=0.0.0.0 cargo run --release -- server
 
 ## Serve the static frontend on port 8000
 serve:

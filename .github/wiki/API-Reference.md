@@ -65,7 +65,7 @@ No GitHub token — log in with GitHub to submit
 
 ## GET `/api/auth/github`
 
-Initiates the GitHub OAuth flow. Redirects to GitHub's authorization page requesting the `public_repo` scope.
+Initiates the GitHub OAuth flow. Redirects to GitHub's authorization page requesting the `repo` scope.
 
 **Required env vars:** `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`  
 **Optional:** `GITHUB_REDIRECT_URL` (defaults to `http://127.0.0.1:3000/api/auth/callback`)
@@ -80,6 +80,72 @@ OAuth callback. Exchanges the authorization `code` for an access token, then ret
 **Success:** Returns HTML that passes the token back to the opener and closes the window.  
 **Failure (bad code):** Posts `{ type: 'github-auth-error', error: '...' }`.  
 **Failure (missing env var):** Returns a human-readable config error page — does not panic.
+
+---
+
+## GET `/api/auth/profile`
+
+Fetches the authenticated user's profile statistics from the `atlas.db` SQLite database.
+
+**Header Required:** `Authorization: Bearer <token>`
+**Success `200`:**
+```json
+{
+  "github_id": "1234567",
+  "username": "Mithril64",
+  "avatar_url": "https://avatars.githubusercontent.com/u/1234567?v=4",
+  "commits": 5,
+  "reviews": 2,
+  "trust_rating": 3,
+  "contribution_days": [
+    { "date": "2026-03-11", "count": 2 },
+    { "date": "2026-03-12", "count": 1 }
+  ]
+}
+```
+**Error `401`:**
+```text
+Unauthorized
+```
+
+---
+
+## POST `/api/github/webhook`
+
+Consumes GitHub webhook events and updates profile metrics.
+
+**Headers:**
+- `X-GitHub-Event` (required)
+- `X-Hub-Signature-256` (required when `GITHUB_WEBHOOK_SECRET` is set)
+
+**Supported events:**
+- `pull_request` (`action=closed`, `merged=true`, `base.ref=main`) → increments `commits`
+- `pull_request_review` (`action=submitted`) → increments `reviews`
+
+Also writes daily contribution buckets in SQLite (`contributions` table), used by the profile heatmap.
+
+**Success `200`:**
+```json
+{"status":"ok","counted":true}
+```
+
+---
+
+## POST `/api/dev/replay-webhook`
+
+Development-only helper to replay webhook payloads locally without GitHub delivery.
+
+**Guard:** requires `ATLAS_ENABLE_DEV_WEBHOOK_REPLAY=true`.
+
+**Headers:**
+- `X-GitHub-Event` (required)
+
+**Body:** raw JSON payload matching a GitHub webhook event shape.
+
+**Success `200`:**
+```json
+{"status":"ok","counted":true,"dev":true}
+```
 
 ---
 

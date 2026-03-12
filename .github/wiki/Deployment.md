@@ -41,7 +41,37 @@ GITHUB_CLIENT_SECRET=your_client_secret
 # Fallback server-side token (used when no user OAuth token is provided)
 # Required scope: repo
 # GITHUB_TOKEN=ghp_...
+
+# Webhook signing secret (GitHub Webhooks -> Secret)
+# GITHUB_WEBHOOK_SECRET=...
+
+# Optional local helper for replaying webhook payloads
+# ATLAS_ENABLE_DEV_WEBHOOK_REPLAY=false
 ```
+
+### Webhook setup (required for accurate profile metrics)
+
+Configure a GitHub webhook for your repository:
+
+- **Payload URL**: `http://127.0.0.1:3000/api/github/webhook` (or your public URL in tunnel/prod)
+- **Content type**: `application/json`
+- **Secret**: same value as `GITHUB_WEBHOOK_SECRET`
+- **Events**:
+    - Pull requests
+    - Pull request reviews
+
+This drives profile counters and heatmap data:
+
+- commits count only when PRs are merged into `main`
+- reviews count on `pull_request_review.submitted`
+
+### Local webhook replay (optional)
+
+For local testing without GitHub delivery:
+
+- set `ATLAS_ENABLE_DEV_WEBHOOK_REPLAY=true`
+- POST a webhook-shaped payload to `/api/dev/replay-webhook`
+- include `X-GitHub-Event` header (`pull_request` or `pull_request_review`)
 
 The server auto-loads `.env` on startup via `dotenv`. No need to `export` manually.
 

@@ -53,9 +53,11 @@ A Rust workspace with a **library crate** (`src/lib.rs`) and a **binary** (`src/
 
 Exports `ingest_submission(raw_text: &str) -> Result<(id, formatted_typst, tag), String>`, the only pure function in the codebase. Imported by `main.rs` and exercised by integration tests in `compiler/tests/`.
 
-### `src/auth.rs` — OAuth handlers
+### `src/auth.rs` — OAuth & Profiles
 
-Implements `GET /api/auth/github` (redirects to GitHub) and `GET /api/auth/callback` (exchanges code → token, sends via `postMessage`). Missing env vars return a graceful HTML error page — they do not panic.
+Implements `GET /api/auth/github` (redirects to GitHub) and `GET /api/auth/callback` (exchanges code → token, establishes User Profile in `atlas.db`, sends via `postMessage`). Also includes `GET /api/auth/profile` to return user statistics (Commits, Reviews, Trust Rating) by decoding their Bearer token. Missing env vars return a graceful HTML error page.
+
+`GET /api/auth/profile` also returns `contribution_days` (last 365 days aggregated by date) for rendering a GitHub-style contribution graph in the frontend.
 
 ### Compile mode (`cargo run --release` / `make compile`)
 
@@ -76,8 +78,11 @@ Runs an [Axum](https://github.com/tokio-rs/axum) HTTP server. Bind address reads
 |--------|------|-------------|
 | `GET` | `/api/graph` | Returns `graph.json` |
 | `POST` | `/api/submit` | Accepts `.typ`, validates, saves, creates GitHub PR |
+| `POST` | `/api/github/webhook` | Consumes GitHub webhook events for merged commits + reviews |
+| `POST` | `/api/dev/replay-webhook` | Local/dev replay endpoint for webhook payloads (env-gated) |
 | `GET` | `/api/auth/github` | Starts OAuth flow |
-| `GET` | `/api/auth/callback` | Completes OAuth, sends token via `postMessage` |
+| `GET` | `/api/auth/callback` | Completes OAuth, saves to SQLite `atlas.db`, sends token via `postMessage` |
+| `GET` | `/api/auth/profile` | Returns user stats + contribution days (`UserProfile` JSON) from DB |
 
 **Submit flow:**
 1. Extracts `Authorization: Bearer <token>` header if present
@@ -86,7 +91,11 @@ Runs an [Axum](https://github.com/tokio-rs/axum) HTTP server. Bind address reads
 4. Saves the formatted file to `../math/{tag}/{id}.typ`
 5. Creates a Git branch `submission-{id}-{timestamp}`, commits, pushes, opens a GitHub PR
 6. Uses the user's OAuth token for the PR; falls back to `GITHUB_TOKEN` env var
-7. Submissions with `tags: [demo]` skip the Git step and return success immediately
+Metrics are now webhook-driven:
+
+- `commits` increment only when GitHub sends `pull_request` with `action=closed`, `merged=true`, and `base.ref=main`.
+- `reviews` increment on `pull_request_review` with `action=submitted`.
+- Daily totals are stored in `contributions(github_id, day, kind, count)` and aggregated for profile heatmaps.
 
 Submission branches are deleted automatically by `.github/workflows/cleanup-branches.yml` when the PR is merged or closed.
 

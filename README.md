@@ -11,10 +11,10 @@ Atlas represents theorems, lemmas, definitions, and axioms as nodes in an intera
 | Layer | Technology |
 |-------|------------|
 | Content | Typst `.typ` files |
-| Compiler + API | Rust (`axum`, `typst-syntax`, `reqwest`) |
+| Compiler + API | Rust (`axum`, `typst-syntax`, `reqwest`, `rusqlite`) |
 | Graph viewer | `force-graph` JS library |
 | IDE | Monaco Editor + `@myriaddreamin/typst.ts` (WASM) |
-| Auth | GitHub OAuth 2.0 (popup flow, `public_repo` scope) |
+| Auth & Profiles | GitHub OAuth 2.0 (popup flow) and local SQLite (`atlas.db`) |
 | Styling | Vanilla CSS (Dracula dark theme) |
 
 ---
@@ -72,11 +72,23 @@ GITHUB_CLIENT_SECRET=...
 
 # Fallback: server-side token used when no user OAuth token is present
 GITHUB_TOKEN=ghp_...
+
+# Webhook signing secret for GitHub events (pull_request, pull_request_review)
+GITHUB_WEBHOOK_SECRET=...
+
+# Optional: allow local replay of webhook payloads via /api/dev/replay-webhook
+ATLAS_ENABLE_DEV_WEBHOOK_REPLAY=false
 ```
 
 For public/tunnel deployment, use `compiler/.env.public` with credentials for a separate "Atlas" OAuth App.
 
 Submissions tagged `// tags: [demo]` skip the Git/PR step entirely (useful for testing).
+
+### Profile metrics & contribution graph
+
+- `commits` increase **only when a PR is merged into `main`** (via GitHub webhook `pull_request` event).
+- `reviews` increase on each `pull_request_review` `submitted` event, regardless of whether the PR is merged or closed later.
+- The profile page includes a GitHub-style contribution heatmap generated from daily contribution buckets stored in `atlas.db`.
 
 ---
 

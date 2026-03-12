@@ -22,7 +22,7 @@ async fn github_auth() -> impl IntoResponse {
         .unwrap_or_else(|_| "http://127.0.0.1:3000/api/auth/callback".to_string());
 
     let auth_url = format!(
-        "https://github.com/login/oauth/authorize?client_id={}&redirect_uri={}&scope=repo",
+        "https://github.com/login/oauth/authorize?client_id={}&redirect_uri={}&scope=public_repo",
         client_id, redirect_url
     );
 

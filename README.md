@@ -14,7 +14,7 @@ Atlas represents theorems, lemmas, definitions, and axioms as nodes in an intera
 | Compiler + API | Rust (`axum`, `typst-syntax`, `reqwest`) |
 | Graph viewer | `force-graph` JS library |
 | IDE | Monaco Editor + `@myriaddreamin/typst.ts` (WASM) |
-| Auth | GitHub OAuth 2.0 (popup flow, `repo` scope) |
+| Auth | GitHub OAuth 2.0 (popup flow, `public_repo` scope) |
 | Styling | Vanilla CSS (Dracula dark theme) |
 
 ---

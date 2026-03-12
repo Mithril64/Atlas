@@ -65,7 +65,7 @@ No GitHub token — log in with GitHub to submit
 
 ## GET `/api/auth/github`
 
-Initiates the GitHub OAuth flow. Redirects to GitHub's authorization page requesting the `repo` scope.
+Initiates the GitHub OAuth flow. Redirects to GitHub's authorization page requesting the `public_repo` scope.
 
 **Required env vars:** `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`  
 **Optional:** `GITHUB_REDIRECT_URL` (defaults to `http://127.0.0.1:3000/api/auth/callback`)

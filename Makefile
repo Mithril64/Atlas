@@ -37,10 +37,16 @@ server-public:
 
 ## Serve the static frontend on port 8000
 serve:
+	@echo "window.ATLAS_API_URL = 'http://127.0.0.1:3000';" > public/js/config.js
 	cd public && python3 -m http.server 8000
 
 ## Serve the static frontend on all interfaces (for LAN / tunnel users)
 serve-public:
+	@DOMAIN=$$(grep NGROK_DOMAIN compiler/.env.public 2>/dev/null | cut -d= -f2 | tr -d '\r'); \
+	if [ -z "$$DOMAIN" ]; then \
+		echo "Error: set NGROK_DOMAIN in compiler/.env.public"; exit 1; \
+	fi; \
+	echo "window.ATLAS_API_URL = 'https://$$DOMAIN';" > public/js/config.js
 	cd public && python3 -m http.server 8000 --bind 0.0.0.0
 
 ## Watch math/ for changes and auto-recompile the graph

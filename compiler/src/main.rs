@@ -5,15 +5,26 @@ use typst_syntax::{parse, SyntaxKind, SyntaxNode};
 use serde::Serialize;
 use axum::{
     extract::Multipart,
+    extract::State,
     response::Json,
     routing::{post, get},
+    http::{HeaderMap, StatusCode},
     Router,
 };
+use axum::http::HeaderName;
 use tower_http::cors::CorsLayer;
 use std::env;
+use hmac::{Hmac, Mac};
+use sha2::Sha256;
 use math_graph_compiler::ingest_submission;
 
 mod auth;
+type HmacSha256 = Hmac<Sha256>;
+
+#[derive(Clone)]
+struct AppState {
+    webhook_secret: Option<String>,
+}
 
 #[derive(Debug, Serialize)]
 struct MathNode {
@@ -131,6 +142,30 @@ fn process_directory(dir: &Path, all_nodes: &mut Vec<MathNode>) {
     }
 }
 
+fn init_db() {
+    let conn = rusqlite::Connection::open("atlas.db").expect("Failed to open DB");
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS users (
+            github_id TEXT PRIMARY KEY,
+            username TEXT NOT NULL,
+            avatar_url TEXT,
+            commits INTEGER DEFAULT 0,
+            reviews INTEGER DEFAULT 0,
+            trust_rating INTEGER DEFAULT 1
+        )",
+        [],
+    ).expect("Failed to create users table");
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS contributions (
+            github_id TEXT NOT NULL,
+            day TEXT NOT NULL,
+            kind TEXT NOT NULL,
+            count INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (github_id, day, kind)
+        )",
+        [],
+    ).expect("Failed to create contributions table");
+}
 
 fn main() {
     let mut public_loaded = false;
@@ -159,6 +194,7 @@ fn main() {
         }
     }
     println!("Starting the atlas Compiler...");
+    init_db();
     let args: Vec<String> = env::args().collect();
     if args.len() > 1 && args[1] == "server" {
         start_server();
@@ -173,11 +209,30 @@ async fn start_server() {
     let port = env::var("SERVER_PORT").unwrap_or_else(|_| "3000".to_string());
     let addr = format!("{}:{}", host, port);
 
+    let cors = CorsLayer::new()
+        .allow_origin(tower_http::cors::Any)
+        .allow_methods(tower_http::cors::Any)
+        .allow_headers([
+            axum::http::header::AUTHORIZATION,
+            axum::http::header::CONTENT_TYPE,
+            HeaderName::from_static("ngrok-skip-browser-warning"),
+        ]);
+
+    let app_state = AppState {
+        webhook_secret: env::var("GITHUB_WEBHOOK_SECRET").ok(),
+    };
+
     let app = Router::new()
         .nest("/api/auth", auth::auth_router())
         .route("/api/submit", post(upload_handler))
         .route("/api/graph", get(graph_handler))
-        .layer(CorsLayer::permissive());
+        .merge(
+            Router::new()
+                .route("/api/github/webhook", post(github_webhook_handler))
+                .route("/api/dev/replay-webhook", post(dev_replay_webhook_handler))
+                .with_state(app_state)
+        )
+        .layer(cors);
     let listener = tokio::net::TcpListener::bind(&addr).await
         .unwrap_or_else(|e| panic!("Failed to bind to {}: {}", addr, e));
     println!("✓ Server running on http://{}", addr);
@@ -211,6 +266,7 @@ async fn upload_handler(headers: axum::http::HeaderMap, mut multipart: Multipart
 
                     if push.is_ok() && push.unwrap().success() {
                         let pr_url = create_github_pr(&branch, &id, auth_token.as_deref()).await.map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e))?;
+
                         return Ok(Json(serde_json::json!({"status": "success", "pr_url": pr_url})));
                     }
                     return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Git push failed".to_string()));
@@ -220,6 +276,151 @@ async fn upload_handler(headers: axum::http::HeaderMap, mut multipart: Multipart
         }
     }
     Err((axum::http::StatusCode::BAD_REQUEST, "No file".to_string()))
+}
+
+fn record_contribution(github_id: &str, username: &str, avatar_url: &str, kind: &str) -> Result<(), String> {
+    let conn = rusqlite::Connection::open("atlas.db").map_err(|e| e.to_string())?;
+    let day = chrono::Utc::now().date_naive().to_string();
+
+    conn.execute(
+        "INSERT INTO users (github_id, username, avatar_url, commits, reviews)
+         VALUES (?1, ?2, ?3, 0, 0)
+         ON CONFLICT(github_id) DO UPDATE SET
+            username = excluded.username,
+            avatar_url = excluded.avatar_url",
+        [github_id, username, avatar_url],
+    ).map_err(|e| e.to_string())?;
+
+    conn.execute(
+        "INSERT INTO contributions (github_id, day, kind, count)
+         VALUES (?1, ?2, ?3, 1)
+         ON CONFLICT(github_id, day, kind) DO UPDATE SET count = count + 1",
+        [github_id, day.as_str(), kind],
+    ).map_err(|e| e.to_string())?;
+
+    match kind {
+        "merge" => {
+            conn.execute("UPDATE users SET commits = commits + 1 WHERE github_id = ?1", [github_id])
+                .map_err(|e| e.to_string())?;
+        }
+        "review" => {
+            conn.execute("UPDATE users SET reviews = reviews + 1 WHERE github_id = ?1", [github_id])
+                .map_err(|e| e.to_string())?;
+        }
+        _ => {}
+    }
+
+    Ok(())
+}
+
+fn process_webhook_event(event: &str, payload: &serde_json::Value) -> Result<bool, String> {
+    if event == "pull_request" {
+        let action = payload["action"].as_str().unwrap_or_default();
+        let merged = payload["pull_request"]["merged"].as_bool().unwrap_or(false);
+        let base_ref = payload["pull_request"]["base"]["ref"].as_str().unwrap_or_default();
+        if action == "closed" && merged && base_ref == "main" {
+            if let Some(merger) = payload["pull_request"]["merged_by"].as_object() {
+                let github_id = merger.get("id").and_then(|v| v.as_i64()).map(|v| v.to_string()).unwrap_or_default();
+                let username = merger.get("login").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let avatar = merger.get("avatar_url").and_then(|v| v.as_str()).unwrap_or("");
+                if !github_id.is_empty() {
+                    record_contribution(&github_id, username, avatar, "merge")?;
+                    return Ok(true);
+                }
+            }
+        }
+    }
+
+    if event == "pull_request_review" {
+        let action = payload["action"].as_str().unwrap_or_default();
+        if action == "submitted" {
+            if let Some(reviewer) = payload["review"]["user"].as_object() {
+                let github_id = reviewer.get("id").and_then(|v| v.as_i64()).map(|v| v.to_string()).unwrap_or_default();
+                let username = reviewer.get("login").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let avatar = reviewer.get("avatar_url").and_then(|v| v.as_str()).unwrap_or("");
+                if !github_id.is_empty() {
+                    record_contribution(&github_id, username, avatar, "review")?;
+                    return Ok(true);
+                }
+            }
+        }
+    }
+
+    Ok(false)
+}
+
+fn verify_signature(secret: &str, body: &[u8], signature_header: Option<&str>) -> bool {
+    let Some(signature_header) = signature_header else {
+        return false;
+    };
+    let Some(sig_hex) = signature_header.strip_prefix("sha256=") else {
+        return false;
+    };
+
+    let mut mac = match HmacSha256::new_from_slice(secret.as_bytes()) {
+        Ok(m) => m,
+        Err(_) => return false,
+    };
+    mac.update(body);
+    let computed = hex::encode(mac.finalize().into_bytes());
+    computed.eq_ignore_ascii_case(sig_hex)
+}
+
+async fn github_webhook_handler(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let event = headers
+        .get("X-GitHub-Event")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default()
+        .to_string();
+
+    if event.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "Missing X-GitHub-Event header".to_string()));
+    }
+
+    let signature = headers
+        .get("X-Hub-Signature-256")
+        .and_then(|v| v.to_str().ok());
+
+    if let Some(secret) = &state.webhook_secret {
+        if !verify_signature(secret, &body, signature) {
+            return Err((StatusCode::UNAUTHORIZED, "Invalid webhook signature".to_string()));
+        }
+    }
+
+    let payload: serde_json::Value = serde_json::from_slice(&body)
+        .map_err(|e| (StatusCode::BAD_REQUEST, format!("Invalid JSON payload: {}", e)))?;
+    let counted = process_webhook_event(&event, &payload)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+
+    Ok(Json(serde_json::json!({"status": "ok", "counted": counted})))
+}
+
+async fn dev_replay_webhook_handler(
+    headers: HeaderMap,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let enabled = env::var("ATLAS_ENABLE_DEV_WEBHOOK_REPLAY").unwrap_or_else(|_| "false".to_string());
+    if enabled != "true" {
+        return Err((StatusCode::FORBIDDEN, "Dev webhook replay is disabled".to_string()));
+    }
+
+    let event = headers
+        .get("X-GitHub-Event")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default()
+        .to_string();
+
+    if event.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "Missing X-GitHub-Event header".to_string()));
+    }
+
+    let counted = process_webhook_event(&event, &payload)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    Ok(Json(serde_json::json!({"status": "ok", "counted": counted, "dev": true})))
 }
 
 async fn graph_handler() -> Json<serde_json::Value> {

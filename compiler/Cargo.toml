@@ -20,3 +20,11 @@ futures = "0.3"
 reqwest = { version = "0.12", features = ["json"] }
 dotenv = "0.15.0"
 oauth2 = "5.0.0"
+rusqlite = { version = "0.31.0", features = ["bundled"] }
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+chrono = { version = "0.4", features = ["clock"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }

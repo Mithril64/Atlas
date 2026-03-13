@@ -45,6 +45,27 @@ make serve
 
 See [Deployment](../../wiki/Deployment) for environment variable setup and the public tunnel workflow.
 
+## Production domains
+
+Atlas production is set up as:
+
+- **Frontend (GitHub Pages):** `https://atlasmath.org`
+- **Backend API:** `https://api.atlasmath.org`
+
+`public/CNAME` is configured for `atlasmath.org`, and frontend API calls are configured in `public/js/config.js` via:
+
+```js
+window.ATLAS_API_URL = 'https://api.atlasmath.org';
+```
+
+For GitHub OAuth in production, set callback URL to:
+
+- `https://api.atlasmath.org/api/auth/callback`
+
+For webhook delivery in production, use:
+
+- `https://api.atlasmath.org/api/github/webhook`
+
 ### Make targets
 
 | Target | Description |

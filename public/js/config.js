@@ -1,1 +1,1 @@
-window.ATLAS_API_URL = 'http://127.0.0.1:3000';
+window.ATLAS_API_URL = 'https://api.atlasmath.org';

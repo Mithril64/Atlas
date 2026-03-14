@@ -45,11 +45,24 @@ const UIController = {
                 const primary = API_BASE ? `${API_BASE}/nodes/${this.currentNode.id}.pdf` : null;
                     const hostFallback = API_BASE ? `${API_BASE}/nodes/${this.currentNode.id}.pdf` : null;
                     const localFallback = `./nodes/${this.currentNode.id}.pdf`;
-                    link.href = primary || hostFallback || localFallback;
-                link.download = `${this.currentNode.id}.pdf`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                    let href = primary || hostFallback || localFallback;
+
+                    link.href = href;
+                    link.download = `${this.currentNode.id}.pdf`;
+                    link.addEventListener('error', async () => {
+                        try {
+                            console.warn('[atlas] PDF download failed, attempting client-side render');
+                            const blobUrl = await renderTypstPdf(this.currentNode);
+                            link.href = blobUrl;
+                            link.click();
+                        } catch (e) {
+                            console.error('[atlas] client-side PDF render failed', e);
+                        }
+                    }, { once: true });
+
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
             }
         });
 
@@ -230,6 +243,19 @@ async function renderTypstFallback(node) {
         UIController.placeholder.style.display = 'block';
         UIController.placeholder.textContent = 'Preview failed to load (fallback render error).';
     }
+}
+
+async function renderTypstPdf(node) {
+    await loadTypstRuntime();
+    if (!mathGraphTypCache) {
+        const res = await fetch("./math-graph.typ");
+        mathGraphTypCache = res.ok ? await res.text() : '';
+    }
+    const body = node.body || '';
+    const wrapped = `#set page(width: 595pt, height: auto, margin: (x: 56pt, y: 48pt), fill: rgb(\"#282a36\"))\n#set text(fill: rgb(\"#f8f8f2\"), size: 12pt)\n\n${mathGraphTypCache}\n\n${body}`;
+    const pdfBytes = await typstInstance.pdf({ mainContent: wrapped });
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    return URL.createObjectURL(blob);
 }
 
 function animateOpacity() {

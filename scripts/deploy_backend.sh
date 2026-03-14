@@ -39,9 +39,22 @@ echo "[deploy] Fetching latest main..."
 git fetch origin
 git reset --hard origin/main
 
-echo "[deploy] Building backend release binary..."
-cd compiler
-"$CARGO_BIN" build --release
+echo "[deploy] Building backend release binary via Makefile..."
+make build-release
+
+echo "[deploy] Compiling graph assets via Makefile (graph.json + nodes/*.svg/*.pdf)..."
+make compile
+
+echo "[deploy] Validating compiled frontend artifacts..."
+if [ ! -s "$REPO_DIR/public/json/graph.json" ]; then
+	echo "[deploy] ERROR: public/json/graph.json missing or empty after compile"
+	exit 1
+fi
+
+if ! find "$REPO_DIR/public/nodes" -maxdepth 1 -type f \( -name '*.svg' -o -name '*.pdf' \) | grep -q .; then
+	echo "[deploy] ERROR: no node SVG/PDF outputs found in public/nodes"
+	exit 1
+fi
 
 echo "[deploy] Restarting atlas-api service..."
 sudo systemctl restart atlas-api

@@ -1,4 +1,4 @@
-.PHONY: build build-release test compile server serve watch dev tunnel tunnel-full full clean
+.PHONY: build build-release test compile server server-public server-prod serve serve-public watch dev tunnel tunnel-full full clean
 
 # ─── Build ──────────────────────────────────────────────────────────────────
 
@@ -33,7 +33,12 @@ server:
 
 ## Start the Axum API on 0.0.0.0:3000 (LAN / hosting — pairs with `make tunnel`)
 server-public:
-	cd compiler && SERVER_HOST=0.0.0.0 cargo run --release -- server
+	cd compiler && DOTENV_FILE=.env.public SERVER_HOST=0.0.0.0 SERVER_PORT=3000 cargo run --release -- server
+
+## Start the Axum API for production behind reverse proxy (Cloudflare/Nginx)
+## Binds to localhost and loads public env config
+server-prod:
+	cd compiler && DOTENV_FILE=.env.public SERVER_HOST=127.0.0.1 SERVER_PORT=3000 cargo run --release -- server
 
 ## Serve the static frontend on port 8000
 serve:

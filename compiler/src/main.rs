@@ -521,8 +521,7 @@ fn ensure_compiled_assets() {
 
 fn compile_all() {
     let root = repo_root();
-    let tmp_dir = root.join(".typst_tmp");
-    fs::create_dir_all(&tmp_dir).unwrap();
+    let tmp_dir = root.clone();
 
     let mut all_nodes = Vec::new();
     process_directory(&root.join("math"), &mut all_nodes);
@@ -543,8 +542,7 @@ fn compile_all() {
         if node.body.is_empty() { continue; }
         
         let svg_content = format!(
-            "#import \"{}\": *\n#set page(width: 500pt, height: auto, margin: 10pt, fill: none)\n#set text(fill: rgb(\"f8f8f2\"), size: 14pt)\n\n{}",
-            root.join("public/math-graph.typ").to_string_lossy(),
+            "#import \"public/math-graph.typ\": *\n#set page(width: 500pt, height: auto, margin: 10pt, fill: none)\n#set text(fill: rgb(\"f8f8f2\"), size: 14pt)\n\n{}",
             node.body
         );
         let temp_svg = tmp_dir.join(format!(".temp_{}.typ", node.id));
@@ -573,8 +571,7 @@ fn compile_all() {
         let _ = fs::remove_file(&temp_svg);
 
         let pdf_content = format!(
-            "#import \"{}\": *\n#set page(width: 595pt, height: auto, margin: (x: 56pt, y: 48pt), fill: rgb(\"#282a36\"))\n#set text(fill: rgb(\"#f8f8f2\"), size: 12pt)\n\n{}",
-            root.join("public/math-graph.typ").to_string_lossy(),
+            "#import \"public/math-graph.typ\": *\n#set page(width: 595pt, height: auto, margin: (x: 56pt, y: 48pt), fill: rgb(\"#282a36\"))\n#set text(fill: rgb(\"#f8f8f2\"), size: 12pt)\n\n{}",
             node.body
         );
         let temp_pdf = tmp_dir.join(format!(".temp_pdf_{}.typ", node.id));

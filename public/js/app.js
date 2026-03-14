@@ -42,7 +42,9 @@ const UIController = {
         this.btnDownload.addEventListener('click', () => {
             if (this.currentNode && !this.currentNode.isGhost) {
                 const link = document.createElement('a');
-                link.href = `${API_BASE}/nodes/${this.currentNode.id}.pdf`;
+                const primary = API_BASE ? `${API_BASE}/nodes/${this.currentNode.id}.pdf` : null;
+                const fallback = `./nodes/${this.currentNode.id}.pdf`;
+                link.href = primary || fallback;
                 link.download = `${this.currentNode.id}.pdf`;
                 document.body.appendChild(link);
                 link.click();
@@ -109,13 +111,24 @@ const UIController = {
             this.btnDownload.style.display = 'block';
             
             const cacheBuster = new Date().getTime();
+            const primarySrc = API_BASE ? `${API_BASE}/nodes/${node.id}.svg?t=${cacheBuster}` : null;
+            const fallbackSrc = `./nodes/${node.id}.svg?t=${cacheBuster}`;
+            let triedFallback = false;
+
             this.mathImage.onerror = (e) => {
+                if (!triedFallback && primarySrc && this.mathImage.src === primarySrc) {
+                    triedFallback = true;
+                    console.warn('[atlas] SVG failed from API base, retrying relative', primarySrc);
+                    this.mathImage.src = fallbackSrc;
+                    return;
+                }
                 console.error('[atlas] SVG failed to load', this.mathImage.src, e);
                 this.mathImage.style.display = 'none';
                 this.placeholder.style.display = 'block';
                 this.placeholder.textContent = 'Preview failed to load.';
             };
-            this.mathImage.src = `${API_BASE}/nodes/${node.id}.svg?t=${cacheBuster}`; 
+
+            this.mathImage.src = primarySrc || fallbackSrc;
         }
 
         this.panel.classList.add('open');
@@ -161,17 +174,36 @@ function animateOpacity() {
 
 const API_BASE = (window.ATLAS_API_URL || '').replace(/\/$/, '');
 
+async function fetchGraphJson() {
+    const endpoints = [];
+    if (API_BASE) endpoints.push(`${API_BASE}/json/graph.json`);
+    endpoints.push('./json/graph.json');
+
+    let lastErr;
+    for (const url of endpoints) {
+        try {
+            const resp = await fetch(url, { mode: 'cors' });
+            if (!resp.ok) {
+                console.error('[atlas] graph.json fetch failed', url, resp.status, resp.statusText);
+                lastErr = new Error(`fetch failed ${resp.status}`);
+                continue;
+            }
+            const data = await resp.json();
+            if (!Array.isArray(data)) {
+                console.error('[atlas] graph.json unexpected shape', url, data);
+            }
+            return data;
+        } catch (e) {
+            console.error('[atlas] graph.json fetch error', url, e);
+            lastErr = e;
+        }
+    }
+    throw lastErr || new Error('graph.json fetch failed');
+}
+
 async function initGraph() {
     try {
-        const response = await fetch(`${API_BASE}/json/graph.json`);
-        if (!response.ok) {
-            console.error('[atlas] graph.json fetch failed', response.status, response.statusText);
-            throw new Error(`graph.json fetch failed: ${response.status}`);
-        }
-        const data = await response.json().catch(err => {
-            console.error('[atlas] graph.json parse error', err);
-            throw err;
-        });
+        const data = await fetchGraphJson();
 
         const nodes = data.map(node => ({ 
             id: node.id, 

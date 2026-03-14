@@ -41,28 +41,54 @@ const UIController = {
 
         this.btnDownload.addEventListener('click', () => {
             if (this.currentNode && !this.currentNode.isGhost) {
-                const link = document.createElement('a');
-                const primary = API_BASE ? `${API_BASE}/nodes/${this.currentNode.id}.pdf` : null;
-                    const hostFallback = API_BASE ? `${API_BASE}/nodes/${this.currentNode.id}.pdf` : null;
-                    const localFallback = `./nodes/${this.currentNode.id}.pdf`;
-                    let href = primary || hostFallback || localFallback;
+                const primary = API_BASE ? `${API_BASE}/api/nodes/${this.currentNode.id}.pdf` : null;
+                const hostFallback = API_BASE ? `${API_BASE}/nodes/${this.currentNode.id}.pdf` : null;
+                const localFallback = `./nodes/${this.currentNode.id}.pdf`;
 
-                    link.href = href;
-                    link.download = `${this.currentNode.id}.pdf`;
-                    link.addEventListener('error', async () => {
+                const tryUrls = [primary, hostFallback, localFallback].filter(Boolean);
+
+                const tryDownload = async () => {
+                    for (const url of tryUrls) {
                         try {
-                            console.warn('[atlas] PDF download failed, attempting client-side render');
-                            const blobUrl = await renderTypstPdf(this.currentNode);
+                            const resp = await fetch(url, { mode: 'cors' });
+                            if (!resp.ok) {
+                                console.warn('[atlas] PDF fetch failed', url, resp.status);
+                                continue;
+                            }
+                            const blob = await resp.blob();
+                            const blobUrl = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
                             link.href = blobUrl;
+                            link.download = `${this.currentNode.id}.pdf`;
+                            document.body.appendChild(link);
                             link.click();
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(blobUrl);
+                            return true;
                         } catch (e) {
-                            console.error('[atlas] client-side PDF render failed', e);
+                            console.warn('[atlas] PDF fetch error', url, e);
                         }
-                    }, { once: true });
+                    }
+                    return false;
+                };
 
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+                (async () => {
+                    const ok = await tryDownload();
+                    if (ok) return;
+                    try {
+                        console.warn('[atlas] PDF download failed, attempting client-side render');
+                        const blobUrl = await renderTypstPdf(this.currentNode);
+                        const link = document.createElement('a');
+                        link.href = blobUrl;
+                        link.download = `${this.currentNode.id}.pdf`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(blobUrl);
+                    } catch (e) {
+                        console.error('[atlas] client-side PDF render failed', e);
+                    }
+                })();
             }
         });
 

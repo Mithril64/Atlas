@@ -33,10 +33,14 @@ jobs:
         run: |
           rm -rf _site
           mkdir -p _site
-          cp -a public/. _site/
+          rsync -a --copy-links --safe-links --delete public/ _site/
 
       - name: Validate snapshot
-        run: test -f _site/index.html
+        run: |
+          test -f _site/index.html
+          if [ -e _site/math-graph.typ ]; then
+            test ! -L _site/math-graph.typ
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

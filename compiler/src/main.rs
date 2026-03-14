@@ -521,7 +521,8 @@ fn ensure_compiled_assets() {
 
 fn compile_all() {
     let root = repo_root();
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let tmp_dir = root.join(".typst_tmp");
+    fs::create_dir_all(&tmp_dir).unwrap();
 
     let mut all_nodes = Vec::new();
     process_directory(&root.join("math"), &mut all_nodes);
@@ -541,10 +542,11 @@ fn compile_all() {
     for node in all_nodes {
         if node.body.is_empty() { continue; }
         
-        let svg_content = format!("#import \"{}\": *\n#set page(width: 500pt, height: auto, margin: 10pt, fill: none)\n#set text(fill: rgb(\"f8f8f2\"), size: 14pt)\n\n{}", root.join("public/math-graph.typ").display(), node.body);
-        let temp_svg = manifest_dir.join(format!(".temp_{}.typ", node.id));
+        let svg_content = format!("#import \"public/math-graph.typ\": *\n#set page(width: 500pt, height: auto, margin: 10pt, fill: none)\n#set text(fill: rgb(\"f8f8f2\"), size: 14pt)\n\n{}", node.body);
+        let temp_svg = tmp_dir.join(format!(".temp_{}.typ", node.id));
         fs::write(&temp_svg, &svg_content).unwrap();
         let svg_out = Command::new("typst")
+            .current_dir(&root)
             .args([
                 "compile",
                 "--root",
@@ -566,10 +568,11 @@ fn compile_all() {
         }
         let _ = fs::remove_file(&temp_svg);
 
-        let pdf_content = format!("#import \"{}\": *\n#set page(width: 595pt, height: auto, margin: (x: 56pt, y: 48pt), fill: rgb(\"#282a36\"))\n#set text(fill: rgb(\"#f8f8f2\"), size: 12pt)\n\n{}", root.join("public/math-graph.typ").display(), node.body);
-        let temp_pdf = manifest_dir.join(format!(".temp_pdf_{}.typ", node.id));
+        let pdf_content = format!("#import \"public/math-graph.typ\": *\n#set page(width: 595pt, height: auto, margin: (x: 56pt, y: 48pt), fill: rgb(\"#282a36\"))\n#set text(fill: rgb(\"#f8f8f2\"), size: 12pt)\n\n{}", node.body);
+        let temp_pdf = tmp_dir.join(format!(".temp_pdf_{}.typ", node.id));
         fs::write(&temp_pdf, &pdf_content).unwrap();
         let pdf_out = Command::new("typst")
+            .current_dir(&root)
             .args([
                 "compile",
                 "--root",

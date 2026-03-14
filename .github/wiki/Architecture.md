@@ -8,7 +8,7 @@ Atlas is split into three concerns: **content** (Typst files), **compilation** (
 
 ## 1. Content Layer (`math/`)
 
-All mathematical content lives as plain `.typ` files, organised by topic (`algebra/`, `analysis/`, `geometry/`). The `schema/` directory contains the shared Typst macro library (`math-graph.typ`), which defines the Dracula-themed node wrappers and body blocks used during compilation and rendering.
+All mathematical content lives as plain `.typ` files, organised by topic (`algebra/`, `analysis/`, `geometry/`). The shared Typst macro library is `public/math-graph.typ`, which defines the Dracula-themed node wrappers and body blocks used during compilation and rendering.
 
 ### Submission Format
 

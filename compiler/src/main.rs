@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use typst_syntax::{parse, SyntaxKind, SyntaxNode};
 use serde::Serialize;
@@ -34,6 +34,13 @@ struct MathNode {
     deps: Vec<String>,
     tags: Vec<String>, 
     body: String, 
+}
+
+fn repo_root() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .canonicalize()
+        .unwrap_or_else(|_| Path::new(env!("CARGO_MANIFEST_DIR")).join(".."))
 }
 
 fn extract_full_text(node: &SyntaxNode) -> String {
@@ -235,8 +242,8 @@ async fn start_server() {
                 .route("/api/dev/replay-webhook", post(dev_replay_webhook_handler))
                 .with_state(app_state)
         )
-        .nest_service("/nodes", ServeDir::new("../public/nodes"))
-        .nest_service("/json", ServeDir::new("../public/json"))
+        .nest_service("/nodes", ServeDir::new(repo_root().join("public/nodes")))
+        .nest_service("/json", ServeDir::new(repo_root().join("public/json")))
         .layer(cors);
     let listener = tokio::net::TcpListener::bind(&addr).await
         .unwrap_or_else(|e| panic!("Failed to bind to {}: {}", addr, e));
@@ -255,15 +262,15 @@ async fn upload_handler(headers: axum::http::HeaderMap, mut multipart: Multipart
             let content = String::from_utf8_lossy(&data).to_string();
             match ingest_submission(&content) {
                 Ok((id, formatted, tag)) => {
-                    let dir = format!("../math/{}", tag);
+                    let dir = repo_root().join("math").join(&tag);
                     fs::create_dir_all(&dir).unwrap();
-                    let path = format!("{}/{}.typ", dir, id);
+                    let path = dir.join(format!("{}.typ", id));
                     fs::write(&path, &formatted).unwrap();
                     
                     if tag == "demo" { return Ok(Json(serde_json::json!({"status": "success", "id": id}))); }
                     
                     let branch = format!("submission-{}-{}", id, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs());
-                    let checkout = Command::new("git").args(["checkout", "-b", &branch]).output();
+                    let checkout = Command::new("git").current_dir(repo_root()).args(["checkout", "-b", &branch]).output();
                     let checkout = match checkout {
                         Ok(o) if o.status.success() => o,
                         Ok(o) => {
@@ -280,11 +287,11 @@ async fn upload_handler(headers: axum::http::HeaderMap, mut multipart: Multipart
                     };
                     let _ = checkout;
 
-                    let add = Command::new("git").args(["add", &path]).output();
+                    let add = Command::new("git").current_dir(repo_root()).args(["add", path.to_str().unwrap_or_default()]).output();
                     match add {
                         Ok(o) if o.status.success() => {}
                         Ok(o) => {
-                            let _ = Command::new("git").args(["checkout", "main"]).output();
+                            let _ = Command::new("git").current_dir(repo_root()).args(["checkout", "main"]).output();
                             return Err((
                                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                                 format!(
@@ -295,12 +302,12 @@ async fn upload_handler(headers: axum::http::HeaderMap, mut multipart: Multipart
                             ));
                         }
                         Err(e) => {
-                            let _ = Command::new("git").args(["checkout", "main"]).output();
+                            let _ = Command::new("git").current_dir(repo_root()).args(["checkout", "main"]).output();
                             return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Git add execution failed: {}", e)));
                         }
                     }
 
-                    let commit = Command::new("git").args(["commit", "-m", &format!("atlas Submission: {}", id)]).output();
+                    let commit = Command::new("git").current_dir(repo_root()).args(["commit", "-m", &format!("atlas Submission: {}", id)]).output();
                     match commit {
                         Ok(o) if o.status.success() => {}
                         Ok(o) => {
@@ -320,8 +327,8 @@ async fn upload_handler(headers: axum::http::HeaderMap, mut multipart: Multipart
                         }
                     }
 
-                    let push = Command::new("git").args(["push", "-u", "origin", &branch]).output();
-                    let _ = Command::new("git").args(["checkout", "main"]).output();
+                    let push = Command::new("git").current_dir(repo_root()).args(["push", "-u", "origin", &branch]).output();
+                    let _ = Command::new("git").current_dir(repo_root()).args(["checkout", "main"]).output();
 
                     if let Ok(push_out) = push {
                         if push_out.status.success() {
@@ -494,16 +501,17 @@ async fn dev_replay_webhook_handler(
 }
 
 async fn graph_handler() -> Json<serde_json::Value> {
-    let content = fs::read_to_string("../public/json/graph.json").unwrap_or_default();
+    let path = repo_root().join("public/json/graph.json");
+    let content = fs::read_to_string(&path).unwrap_or_default();
     Json(serde_json::from_str(&content).unwrap_or(serde_json::json!({"error": "No graph"})))
 }
 
 fn ensure_compiled_assets() {
-    let graph_exists = Path::new("../public/json/graph.json").exists();
-    let nodes_dir = Path::new("../public/nodes");
+    let graph_path = repo_root().join("public/json/graph.json");
+    let nodes_dir = repo_root().join("public/nodes");
     let nodes_present = nodes_dir.read_dir().map(|mut r| r.next().is_some()).unwrap_or(false);
 
-    if graph_exists && nodes_present {
+    if graph_path.exists() && nodes_present {
         return;
     }
 
@@ -512,12 +520,18 @@ fn ensure_compiled_assets() {
 }
 
 fn compile_all() {
+    let root = repo_root();
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+
     let mut all_nodes = Vec::new();
-    process_directory(Path::new("../math"), &mut all_nodes);
-    fs::write("../public/json/graph.json", serde_json::to_string_pretty(&all_nodes).unwrap()).expect("Write failed");
+    process_directory(&root.join("math"), &mut all_nodes);
+
+    let graph_path = root.join("public/json/graph.json");
+    fs::create_dir_all(graph_path.parent().unwrap()).unwrap();
+    fs::write(&graph_path, serde_json::to_string_pretty(&all_nodes).unwrap()).expect("Write failed");
     
     println!("Compiling HTML fragments...");
-    let nodes_dir = Path::new("../public/nodes");
+    let nodes_dir = root.join("public/nodes");
     fs::create_dir_all(nodes_dir).unwrap();
 
     if all_nodes.is_empty() {
@@ -527,11 +541,17 @@ fn compile_all() {
     for node in all_nodes {
         if node.body.is_empty() { continue; }
         
-        let svg_content = format!("#import \"../public/math-graph.typ\": *\n#set page(width: 500pt, height: auto, margin: 10pt, fill: none)\n#set text(fill: rgb(\"f8f8f2\"), size: 14pt)\n\n{}", node.body);
-        let temp_svg = format!(".temp_{}.typ", node.id);
+        let svg_content = format!("#import \"{}\": *\n#set page(width: 500pt, height: auto, margin: 10pt, fill: none)\n#set text(fill: rgb(\"f8f8f2\"), size: 14pt)\n\n{}", root.join("public/math-graph.typ").display(), node.body);
+        let temp_svg = manifest_dir.join(format!(".temp_{}.typ", node.id));
         fs::write(&temp_svg, &svg_content).unwrap();
         let svg_out = Command::new("typst")
-            .args(["compile", "--root", "..", &temp_svg, &format!("../public/nodes/{}.svg", node.id)])
+            .args([
+                "compile",
+                "--root",
+                root.to_str().unwrap_or(".."),
+                temp_svg.to_str().unwrap_or_default(),
+                root.join("public/nodes").join(format!("{}.svg", node.id)).to_str().unwrap_or_default()
+            ])
             .output()
             .unwrap();
         if !svg_out.status.success() {
@@ -546,11 +566,17 @@ fn compile_all() {
         }
         let _ = fs::remove_file(&temp_svg);
 
-        let pdf_content = format!("#import \"../public/math-graph.typ\": *\n#set page(width: 595pt, height: auto, margin: (x: 56pt, y: 48pt), fill: rgb(\"#282a36\"))\n#set text(fill: rgb(\"#f8f8f2\"), size: 12pt)\n\n{}", node.body);
-        let temp_pdf = format!(".temp_pdf_{}.typ", node.id);
+        let pdf_content = format!("#import \"{}\": *\n#set page(width: 595pt, height: auto, margin: (x: 56pt, y: 48pt), fill: rgb(\"#282a36\"))\n#set text(fill: rgb(\"#f8f8f2\"), size: 12pt)\n\n{}", root.join("public/math-graph.typ").display(), node.body);
+        let temp_pdf = manifest_dir.join(format!(".temp_pdf_{}.typ", node.id));
         fs::write(&temp_pdf, &pdf_content).unwrap();
         let pdf_out = Command::new("typst")
-            .args(["compile", "--root", "..", &temp_pdf, &format!("../public/nodes/{}.pdf", node.id)])
+            .args([
+                "compile",
+                "--root",
+                root.to_str().unwrap_or(".."),
+                temp_pdf.to_str().unwrap_or_default(),
+                root.join("public/nodes").join(format!("{}.pdf", node.id)).to_str().unwrap_or_default()
+            ])
             .output()
             .unwrap();
         if !pdf_out.status.success() {

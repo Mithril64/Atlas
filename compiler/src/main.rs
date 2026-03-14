@@ -258,18 +258,83 @@ async fn upload_handler(headers: axum::http::HeaderMap, mut multipart: Multipart
                     if tag == "demo" { return Ok(Json(serde_json::json!({"status": "success", "id": id}))); }
                     
                     let branch = format!("submission-{}-{}", id, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs());
-                    Command::new("git").args(["checkout", "-b", &branch]).status().unwrap();
-                    Command::new("git").args(["add", &path]).status().unwrap();
-                    Command::new("git").args(["commit", "-m", &format!("atlas Submission: {}", id)]).status().unwrap();
-                    let push = Command::new("git").args(["push", "-u", "origin", &branch]).status();
-                    Command::new("git").args(["checkout", "main"]).status().unwrap();
+                    let checkout = Command::new("git").args(["checkout", "-b", &branch]).output();
+                    let checkout = match checkout {
+                        Ok(o) if o.status.success() => o,
+                        Ok(o) => {
+                            return Err((
+                                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                                format!(
+                                    "Git checkout failed: {}{}",
+                                    String::from_utf8_lossy(&o.stderr),
+                                    String::from_utf8_lossy(&o.stdout)
+                                )
+                            ));
+                        }
+                        Err(e) => return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Git checkout execution failed: {}", e))),
+                    };
+                    let _ = checkout;
 
-                    if push.is_ok() && push.unwrap().success() {
+                    let add = Command::new("git").args(["add", &path]).output();
+                    match add {
+                        Ok(o) if o.status.success() => {}
+                        Ok(o) => {
+                            let _ = Command::new("git").args(["checkout", "main"]).output();
+                            return Err((
+                                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                                format!(
+                                    "Git add failed: {}{}",
+                                    String::from_utf8_lossy(&o.stderr),
+                                    String::from_utf8_lossy(&o.stdout)
+                                )
+                            ));
+                        }
+                        Err(e) => {
+                            let _ = Command::new("git").args(["checkout", "main"]).output();
+                            return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Git add execution failed: {}", e)));
+                        }
+                    }
+
+                    let commit = Command::new("git").args(["commit", "-m", &format!("atlas Submission: {}", id)]).output();
+                    match commit {
+                        Ok(o) if o.status.success() => {}
+                        Ok(o) => {
+                            let _ = Command::new("git").args(["checkout", "main"]).output();
+                            return Err((
+                                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                                format!(
+                                    "Git commit failed: {}{}",
+                                    String::from_utf8_lossy(&o.stderr),
+                                    String::from_utf8_lossy(&o.stdout)
+                                )
+                            ));
+                        }
+                        Err(e) => {
+                            let _ = Command::new("git").args(["checkout", "main"]).output();
+                            return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, format!("Git commit execution failed: {}", e)));
+                        }
+                    }
+
+                    let push = Command::new("git").args(["push", "-u", "origin", &branch]).output();
+                    let _ = Command::new("git").args(["checkout", "main"]).output();
+
+                    if let Ok(push_out) = push {
+                        if push_out.status.success() {
                         let pr_url = create_github_pr(&branch, &id, auth_token.as_deref()).await.map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e))?;
 
                         return Ok(Json(serde_json::json!({"status": "success", "pr_url": pr_url})));
+                        }
+
+                        return Err((
+                            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                            format!(
+                                "Git push failed: {}{}",
+                                String::from_utf8_lossy(&push_out.stderr),
+                                String::from_utf8_lossy(&push_out.stdout)
+                            )
+                        ));
                     }
-                    return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Git push failed".to_string()));
+                    return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Git push execution failed".to_string()));
                 }
                 Err(e) => return Err((axum::http::StatusCode::BAD_REQUEST, e)),
             }

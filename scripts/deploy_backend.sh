@@ -44,7 +44,12 @@ echo "[deploy] Building backend release binary via Makefile..."
 make build-release
 
 echo "[deploy] Compiling graph assets via Makefile (graph.json + nodes/*.svg/*.pdf)..."
-make compile
+DOTENV_FILE=.env.public make compile
+
+echo "[deploy] Setting frontend API base URL for production..."
+cat > "$REPO_DIR/public/js/config.js" <<'EOF'
+window.ATLAS_API_URL = 'https://api.atlasmath.org';
+EOF
 
 echo "[deploy] Validating compiled frontend artifacts..."
 if [ ! -s "$REPO_DIR/public/json/graph.json" ]; then

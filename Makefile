@@ -22,7 +22,7 @@ test:
 
 ## Compile all .typ files → public/json/graph.json + public/nodes/{id}.svg/.pdf
 compile:
-	cd compiler && cargo run --release
+	cd compiler && DOTENV_FILE=$${DOTENV_FILE:-.env} cargo run --release
 	@echo "✓ Graph compiled"
 
 # ─── Local servers ──────────────────────────────────────────────────────────

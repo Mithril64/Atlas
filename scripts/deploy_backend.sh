@@ -62,6 +62,21 @@ if ! find "$REPO_DIR/public/nodes" -maxdepth 1 -type f \( -name '*.svg' -o -name
 	exit 1
 fi
 
+EXPECTED_NODES=$(python3 - <<'PY'
+import json
+from pathlib import Path
+p = Path("/root/Atlas/public/json/graph.json")
+data = json.loads(p.read_text()) if p.exists() else []
+print(len(data) if isinstance(data, list) else 0)
+PY
+)
+SVG_COUNT=$(find "$REPO_DIR/public/nodes" -maxdepth 1 -type f -name '*.svg' | wc -l | tr -d ' ')
+
+if [ "$SVG_COUNT" -lt "$EXPECTED_NODES" ]; then
+  echo "[deploy] ERROR: node artifact mismatch (expected $EXPECTED_NODES SVGs from graph.json, found $SVG_COUNT)"
+  exit 1
+fi
+
 echo "[deploy] Newest node artifacts:"
 find "$REPO_DIR/public/nodes" -maxdepth 1 -type f \( -name '*.svg' -o -name '*.pdf' \) -printf '%TY-%Tm-%Td %TH:%TM:%TS %f\n' | sort | tail -n 5
 

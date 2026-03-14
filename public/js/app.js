@@ -42,7 +42,7 @@ const UIController = {
         this.btnDownload.addEventListener('click', () => {
             if (this.currentNode && !this.currentNode.isGhost) {
                 const link = document.createElement('a');
-                link.href = `./nodes/${this.currentNode.id}.pdf`;
+                link.href = `${API_BASE}/nodes/${this.currentNode.id}.pdf`;
                 link.download = `${this.currentNode.id}.pdf`;
                 document.body.appendChild(link);
                 link.click();
@@ -115,7 +115,7 @@ const UIController = {
                 this.placeholder.style.display = 'block';
                 this.placeholder.textContent = 'Preview failed to load.';
             };
-            this.mathImage.src = `./nodes/${node.id}.svg?t=${cacheBuster}`; 
+            this.mathImage.src = `${API_BASE}/nodes/${node.id}.svg?t=${cacheBuster}`; 
         }
 
         this.panel.classList.add('open');
@@ -159,9 +159,11 @@ function animateOpacity() {
     }
 }
 
+const API_BASE = (window.ATLAS_API_URL || '').replace(/\/$/, '');
+
 async function initGraph() {
     try {
-        const response = await fetch('./json/graph.json');
+        const response = await fetch(`${API_BASE}/json/graph.json`);
         if (!response.ok) {
             console.error('[atlas] graph.json fetch failed', response.status, response.statusText);
             throw new Error(`graph.json fetch failed: ${response.status}`);

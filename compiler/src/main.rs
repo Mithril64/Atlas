@@ -7,12 +7,13 @@ use axum::{
     extract::Multipart,
     extract::State,
     response::Json,
-    routing::{post, get},
+    routing::{get, post},
     http::{HeaderMap, StatusCode},
     Router,
 };
 use axum::http::HeaderName;
 use tower_http::cors::CorsLayer;
+use tower_http::services::ServeDir;
 use std::env;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
@@ -205,6 +206,8 @@ fn main() {
 
 #[tokio::main]
 async fn start_server() {
+    ensure_compiled_assets();
+
     let host = env::var("SERVER_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
     let port = env::var("SERVER_PORT").unwrap_or_else(|_| "3000".to_string());
     let addr = format!("{}:{}", host, port);
@@ -232,6 +235,8 @@ async fn start_server() {
                 .route("/api/dev/replay-webhook", post(dev_replay_webhook_handler))
                 .with_state(app_state)
         )
+        .nest_service("/nodes", ServeDir::new("../public/nodes"))
+        .nest_service("/json", ServeDir::new("../public/json"))
         .layer(cors);
     let listener = tokio::net::TcpListener::bind(&addr).await
         .unwrap_or_else(|e| panic!("Failed to bind to {}: {}", addr, e));
@@ -491,6 +496,19 @@ async fn dev_replay_webhook_handler(
 async fn graph_handler() -> Json<serde_json::Value> {
     let content = fs::read_to_string("../public/json/graph.json").unwrap_or_default();
     Json(serde_json::from_str(&content).unwrap_or(serde_json::json!({"error": "No graph"})))
+}
+
+fn ensure_compiled_assets() {
+    let graph_exists = Path::new("../public/json/graph.json").exists();
+    let nodes_dir = Path::new("../public/nodes");
+    let nodes_present = nodes_dir.read_dir().map(|mut r| r.next().is_some()).unwrap_or(false);
+
+    if graph_exists && nodes_present {
+        return;
+    }
+
+    println!("Graph assets missing or empty; running compile_all() before starting server...");
+    compile_all();
 }
 
 fn compile_all() {

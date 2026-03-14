@@ -134,7 +134,10 @@ const UIController = {
                 console.error('[atlas] SVG failed to load', this.mathImage.src, e);
                 this.mathImage.style.display = 'none';
                 this.placeholder.style.display = 'block';
-                this.placeholder.textContent = 'Preview failed to load.';
+                this.placeholder.textContent = 'Preview failed to load. Trying local render...';
+                if (this.currentNode) {
+                    renderTypstFallback(this.currentNode);
+                }
             };
 
             this.mathImage.src = primarySrc || hostFallback || localFallback;
@@ -162,6 +165,72 @@ let currentDimAlpha = 1.0;
 let targetDimAlpha = 1.0;
 let animationFrameId = null;
 let Graph; 
+
+// ─── Typst fallback renderer (lazy-loaded, used if SVG fetch fails) ───────────
+let typstPromise = null;
+let typstInstance = null;
+let mathGraphTypCache = null;
+
+async function loadTypstRuntime() {
+    if (typstPromise) return typstPromise;
+    typstPromise = (async () => {
+        const CDN_URL = "https://esm.sh/@myriaddreamin/typst.ts@0.4.1/dist/esm/contrib/snippet.mjs?bundle=all";
+        const res = await fetch(CDN_URL);
+        if (!res.ok) throw new Error(`typst.ts CDN fetch failed: ${res.status}`);
+        let code = await res.text();
+        code = code.replace(/from\s+["'](\/[^"]+)["']/g, 'from "https://esm.sh$1"');
+        code = code.replace(/import\s+["'](\/[^"]+)["']/g, 'import "https://esm.sh$1"');
+        const blob = new Blob([code], { type: "application/javascript" });
+        const blobURL = URL.createObjectURL(blob);
+        try {
+            const mod = await import(blobURL);
+            typstInstance = mod.$typst;
+        } finally {
+            URL.revokeObjectURL(blobURL);
+        }
+
+        // wasm init
+        await typstInstance.setCompilerInitOptions({
+            getModule: () => fetch("https://unpkg.com/@myriaddreamin/typst-ts-web-compiler@0.4.1/pkg/typst_ts_web_compiler_bg.wasm")
+                .then(r => r.arrayBuffer())
+                .then(buf => new Uint8Array(buf)),
+        });
+        await typstInstance.setRendererInitOptions({
+            getModule: () => fetch("https://unpkg.com/@myriaddreamin/typst-ts-renderer@0.4.1/pkg/typst_ts_renderer_bg.wasm")
+                .then(r => r.arrayBuffer())
+                .then(buf => new Uint8Array(buf)),
+        });
+        return typstInstance;
+    })();
+    return typstPromise;
+}
+
+async function renderTypstFallback(node) {
+    try {
+        await loadTypstRuntime();
+        if (!mathGraphTypCache) {
+            const res = await fetch("./math-graph.typ");
+            if (res.ok) {
+                mathGraphTypCache = await res.text();
+            } else {
+                console.error('[atlas] fallback: failed to fetch math-graph.typ', res.status);
+                mathGraphTypCache = '';
+            }
+        }
+
+        const body = node.body || '';
+        const wrapped = `#set page(width: 500pt, height: auto, margin: 10pt, fill: rgb(\"#282a36\"))\n#set text(fill: rgb(\"#f8f8f2\"), size: 14pt)\n\n${mathGraphTypCache}\n\n${body}`;
+        const svg = await typstInstance.svg({ mainContent: wrapped });
+        UIController.mathImage.style.display = 'none';
+        UIController.placeholder.style.display = 'block';
+        UIController.placeholder.innerHTML = svg;
+        UIController.placeholder.style.color = '#f8f8f2';
+    } catch (e) {
+        console.error('[atlas] fallback Typst render failed', e);
+        UIController.placeholder.style.display = 'block';
+        UIController.placeholder.textContent = 'Preview failed to load (fallback render error).';
+    }
+}
 
 function animateOpacity() {
     const speed = 0.08; 

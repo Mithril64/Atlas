@@ -43,8 +43,9 @@ const UIController = {
             if (this.currentNode && !this.currentNode.isGhost) {
                 const link = document.createElement('a');
                 const primary = API_BASE ? `${API_BASE}/nodes/${this.currentNode.id}.pdf` : null;
-                const fallback = `./nodes/${this.currentNode.id}.pdf`;
-                link.href = primary || fallback;
+                    const hostFallback = API_BASE ? `${API_BASE}/nodes/${this.currentNode.id}.pdf` : null;
+                    const localFallback = `./nodes/${this.currentNode.id}.pdf`;
+                    link.href = primary || hostFallback || localFallback;
                 link.download = `${this.currentNode.id}.pdf`;
                 document.body.appendChild(link);
                 link.click();
@@ -111,15 +112,23 @@ const UIController = {
             this.btnDownload.style.display = 'block';
             
             const cacheBuster = new Date().getTime();
-            const primarySrc = API_BASE ? `${API_BASE}/nodes/${node.id}.svg?t=${cacheBuster}` : null;
-            const fallbackSrc = `./nodes/${node.id}.svg?t=${cacheBuster}`;
-            let triedFallback = false;
+            const primarySrc = API_BASE ? `${API_BASE}/api/nodes/${node.id}.svg?t=${cacheBuster}` : null;
+            const hostFallback = API_BASE ? `${API_BASE}/nodes/${node.id}.svg?t=${cacheBuster}` : null;
+            const localFallback = `./nodes/${node.id}.svg?t=${cacheBuster}`;
+            let triedHostFallback = false;
+            let triedLocal = false;
 
             this.mathImage.onerror = (e) => {
-                if (!triedFallback && primarySrc && this.mathImage.src === primarySrc) {
-                    triedFallback = true;
-                    console.warn('[atlas] SVG failed from API base, retrying relative', primarySrc);
-                    this.mathImage.src = fallbackSrc;
+                if (!triedHostFallback && primarySrc && this.mathImage.src === primarySrc) {
+                    triedHostFallback = true;
+                    console.warn('[atlas] SVG failed from API /api/nodes, retrying /nodes', primarySrc);
+                    this.mathImage.src = hostFallback || localFallback;
+                    return;
+                }
+                if (!triedLocal && hostFallback && this.mathImage.src === hostFallback) {
+                    triedLocal = true;
+                    console.warn('[atlas] SVG failed from host /nodes, retrying local relative', hostFallback);
+                    this.mathImage.src = localFallback;
                     return;
                 }
                 console.error('[atlas] SVG failed to load', this.mathImage.src, e);
@@ -128,7 +137,7 @@ const UIController = {
                 this.placeholder.textContent = 'Preview failed to load.';
             };
 
-            this.mathImage.src = primarySrc || fallbackSrc;
+            this.mathImage.src = primarySrc || hostFallback || localFallback;
         }
 
         this.panel.classList.add('open');
@@ -176,7 +185,10 @@ const API_BASE = (window.ATLAS_API_URL || '').replace(/\/$/, '');
 
 async function fetchGraphJson() {
     const endpoints = [];
-    if (API_BASE) endpoints.push(`${API_BASE}/json/graph.json`);
+    if (API_BASE) {
+        endpoints.push(`${API_BASE}/api/graph`);
+        endpoints.push(`${API_BASE}/api/json/graph.json`);
+    }
     endpoints.push('./json/graph.json');
 
     let lastErr;

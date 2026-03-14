@@ -244,6 +244,8 @@ async fn start_server() {
         )
         .nest_service("/nodes", ServeDir::new(repo_root().join("public/nodes")))
         .nest_service("/json", ServeDir::new(repo_root().join("public/json")))
+        .nest_service("/api/nodes", ServeDir::new(repo_root().join("public/nodes")))
+        .nest_service("/api/json", ServeDir::new(repo_root().join("public/json")))
         .layer(cors);
     let listener = tokio::net::TcpListener::bind(&addr).await
         .unwrap_or_else(|e| panic!("Failed to bind to {}: {}", addr, e));

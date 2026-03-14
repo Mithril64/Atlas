@@ -109,6 +109,12 @@ const UIController = {
             this.btnDownload.style.display = 'block';
             
             const cacheBuster = new Date().getTime();
+            this.mathImage.onerror = (e) => {
+                console.error('[atlas] SVG failed to load', this.mathImage.src, e);
+                this.mathImage.style.display = 'none';
+                this.placeholder.style.display = 'block';
+                this.placeholder.textContent = 'Preview failed to load.';
+            };
             this.mathImage.src = `./nodes/${node.id}.svg?t=${cacheBuster}`; 
         }
 
@@ -156,7 +162,14 @@ function animateOpacity() {
 async function initGraph() {
     try {
         const response = await fetch('./json/graph.json');
-        const data = await response.json();
+        if (!response.ok) {
+            console.error('[atlas] graph.json fetch failed', response.status, response.statusText);
+            throw new Error(`graph.json fetch failed: ${response.status}`);
+        }
+        const data = await response.json().catch(err => {
+            console.error('[atlas] graph.json parse error', err);
+            throw err;
+        });
 
         const nodes = data.map(node => ({ 
             id: node.id, 

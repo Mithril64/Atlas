@@ -40,11 +40,45 @@ git fetch origin
 git reset --hard origin/main
 echo "[deploy] Deployed commit: $(git rev-parse --short HEAD)"
 
+echo "[deploy] Debug: PATH is $PATH"
+echo "[deploy] Debug: using cargo at ${CARGO_BIN}"
+if command -v typst >/dev/null 2>&1; then
+	echo "[deploy] Debug: typst version -> $(typst --version)"
+else
+	echo "[deploy] WARNING: typst not found in PATH during deploy (compiles will fail)"
+fi
+
+echo "[deploy] Debug: env files in compiler/ (listing only)"
+ls -l "$REPO_DIR/compiler" | sed -n '1,12p'
+if [ -f "$REPO_DIR/compiler/.env.public" ]; then
+	echo "[deploy] Debug: compiler/.env.public exists (size $(stat -c%s "$REPO_DIR/compiler/.env.public") bytes)"
+elif [ -f "$REPO_DIR/compiler/.env" ]; then
+	echo "[deploy] Debug: compiler/.env exists (size $(stat -c%s "$REPO_DIR/compiler/.env") bytes)"
+else
+	echo "[deploy] WARNING: no .env or .env.public found in compiler/"
+fi
+
 echo "[deploy] Building backend release binary via Makefile..."
 make build-release
 
+echo "[deploy] Debug: newest backend artifacts after build-release:"
+find "$REPO_DIR/compiler/target/release" -maxdepth 1 -type f -printf '%TY-%Tm-%Td %TH:%TM:%TS %f\n' | sort | tail -n 5
+
+echo "[deploy] Debug: ensuring nodes directory exists"
+mkdir -p "$REPO_DIR/public/nodes"
+
 echo "[deploy] Compiling graph assets via Makefile (graph.json + nodes/*.svg/*.pdf)..."
 DOTENV_FILE=.env.public make compile
+
+echo "[deploy] Debug: compile finished; summarizing outputs"
+if [ -f "$REPO_DIR/public/json/graph.json" ]; then
+	echo "[deploy] Debug: graph.json size $(stat -c%s "$REPO_DIR/public/json/graph.json") bytes"
+else
+	echo "[deploy] WARNING: graph.json missing after compile"
+fi
+SVG_COUNT_POST=$(find "$REPO_DIR/public/nodes" -maxdepth 1 -type f -name '*.svg' | wc -l | tr -d ' ')
+PDF_COUNT_POST=$(find "$REPO_DIR/public/nodes" -maxdepth 1 -type f -name '*.pdf' | wc -l | tr -d ' ')
+echo "[deploy] Debug: node artifact counts => svg=$SVG_COUNT_POST pdf=$PDF_COUNT_POST"
 
 echo "[deploy] Setting frontend API base URL for production..."
 cat > "$REPO_DIR/public/js/config.js" <<'EOF'
@@ -83,5 +117,8 @@ find "$REPO_DIR/public/nodes" -maxdepth 1 -type f \( -name '*.svg' -o -name '*.p
 echo "[deploy] Restarting atlas-api service..."
 sudo systemctl restart atlas-api
 sudo systemctl --no-pager --full status atlas-api
+
+echo "[deploy] Debug: recent atlas-api journal entries"
+sudo journalctl -u atlas-api -n 40 --no-pager || true
 
 echo "[deploy] Done."

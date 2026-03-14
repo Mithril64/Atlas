@@ -38,6 +38,7 @@ cd "$REPO_DIR"
 echo "[deploy] Fetching latest main..."
 git fetch origin
 git reset --hard origin/main
+echo "[deploy] Deployed commit: $(git rev-parse --short HEAD)"
 
 echo "[deploy] Building backend release binary via Makefile..."
 make build-release
@@ -55,6 +56,9 @@ if ! find "$REPO_DIR/public/nodes" -maxdepth 1 -type f \( -name '*.svg' -o -name
 	echo "[deploy] ERROR: no node SVG/PDF outputs found in public/nodes"
 	exit 1
 fi
+
+echo "[deploy] Newest node artifacts:"
+find "$REPO_DIR/public/nodes" -maxdepth 1 -type f \( -name '*.svg' -o -name '*.pdf' \) -printf '%TY-%Tm-%Td %TH:%TM:%TS %f\n' | sort | tail -n 5
 
 echo "[deploy] Restarting atlas-api service..."
 sudo systemctl restart atlas-api

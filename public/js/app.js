@@ -235,6 +235,8 @@ let currentSelectedIndex = -1;
 const commandOverlay = document.getElementById('command-overlay');
 const commandPanel = document.getElementById('command-panel');
 let searchDebounceId = null;
+let showGhostNodes = true;
+let showLinks = true;
 
 // ─── Typst fallback renderer (lazy-loaded, used if SVG fetch fails) ───────────
 let typstPromise = null;
@@ -349,6 +351,22 @@ function displayNameFromId(id) {
     return stripped.charAt(0).toUpperCase() + stripped.slice(1);
 }
 
+function applyVisibilityFilters() {
+    if (!Graph) return;
+    Graph.nodeVisibility(node => showGhostNodes || node.type !== 'ghost');
+    Graph.linkVisibility(() => showLinks);
+}
+
+function toggleGhosts() {
+    showGhostNodes = !showGhostNodes;
+    applyVisibilityFilters();
+}
+
+function toggleLinks() {
+    showLinks = !showLinks;
+    applyVisibilityFilters();
+}
+
 function processSearchQuery(query) {
     if (!searchInput || !searchResults || !Graph) return;
     searchResults.innerHTML = '';
@@ -415,6 +433,34 @@ function processSearchQuery(query) {
         }
         searchResults.classList.remove('visible');
         return; 
+    }
+
+    // --- TOGGLE COMMANDS ---
+    if (query === 'toggle:ghosts' || query === 'toggle ghosts') {
+        toggleGhosts();
+        searchResults.classList.remove('visible');
+        return;
+    }
+
+    if (query === 'toggle:links' || query === 'toggle links') {
+        toggleLinks();
+        searchResults.classList.remove('visible');
+        return;
+    }
+
+    // --- IDE COMMAND ---
+    if (query.startsWith('ide ') || query.startsWith(':ide')) {
+        const parts = query.split(/\s+/);
+        const targetTerm = parts.slice(1).join(' ').trim();
+        if (targetTerm) {
+            const match = findNodeByFuzzyId(currentNodes, targetTerm);
+            if (match) {
+                openInIDE(match);
+                closeCommandPalette();
+            }
+        }
+        searchResults.classList.remove('visible');
+        return;
     }
 
     // --- STANDARD SEARCH (Dropdown) ---
@@ -488,6 +534,60 @@ function closeCommandPalette() {
     commandOverlay.classList.remove('open');
     if (searchResults) searchResults.classList.remove('visible');
     currentSelectedIndex = -1;
+}
+
+function findNodeByFuzzyId(nodes, term) {
+    const lower = term.toLowerCase();
+    let exact = nodes.find(n => n.id.toLowerCase() === lower);
+    if (exact) return exact;
+    let partial = nodes.find(n => n.id.toLowerCase().includes(lower));
+    if (partial) return partial;
+    let clean = nodes.find(n => displayNameFromId(n.id).toLowerCase().includes(lower));
+    return clean || null;
+}
+
+function openInIDE(node) {
+    const payload = buildIdeTemplate(node);
+    try {
+        localStorage.setItem('atlas-ide-content', payload);
+    } catch (e) {
+        console.warn('Failed to set IDE content in localStorage', e);
+    }
+    window.open(`ide.html#${encodeURIComponent(node.id)}`, '_blank');
+}
+
+function buildIdeTemplate(node) {
+    const hasBody = node && node.body && !node.isGhost;
+    if (hasBody) return node.body;
+
+    const id = node?.id || 'new-node';
+    const deps = Array.isArray(node?.deps) ? node.deps : [];
+    const typeGuess = (() => {
+        if (id.startsWith('def-')) return 'definition';
+        if (id.startsWith('ax-')) return 'axiom';
+        if (id.startsWith('lem-')) return 'lemma';
+        return 'theorem';
+    })();
+
+    const depsLine = deps.length ? deps.join(', ') : '';
+
+    return `// id: ${id}
+// type: ${typeGuess}
+// deps: [${depsLine}]
+// tags: [tag]
+---
+#statement[
+  Describe the statement of ${id} here.
+]
+
+#intuition[
+  Give a short intuition or context.
+]
+
+#proof[
+  Sketch or provide the full proof.
+]
+`;
 }
 
 async function fetchGraphJson() {
@@ -565,6 +665,8 @@ async function initGraph() {
             .linkDirectionalArrowLength(5)
             .linkDirectionalArrowRelPos(1)
             .linkCurvature(0.1);
+
+        applyVisibilityFilters();
 
         Graph
             .nodeColor(node => {

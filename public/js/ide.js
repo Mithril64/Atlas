@@ -214,9 +214,12 @@ require(['vs/editor/editor.main'], function () {
     });
 
     const savedCode = localStorage.getItem('atlas-ide-content');
+    const hashId = decodeURIComponent((window.location.hash || '').replace('#', ''));
+
+    const initialValue = savedCode !== null ? savedCode : initialCode;
 
     editor = monaco.editor.create(document.getElementById('editor-container'), {
-        value: savedCode !== null ? savedCode : initialCode,
+        value: initialValue,
         language: 'typst',
         theme: 'vs-dark',
         minimap: { enabled: false },
@@ -231,6 +234,11 @@ require(['vs/editor/editor.main'], function () {
         clearTimeout(compileTimeout);
         compileTimeout = setTimeout(renderPreview, 300);
     });
+    
+    // If opened from graph with a hash id and stored content, keep as-is; otherwise load default
+    if (savedCode && hashId) {
+        // already set via savedCode; nothing further
+    }
     
     // Initial compile once editor is ready
     if ($typst) renderPreview();

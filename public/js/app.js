@@ -347,7 +347,8 @@ async function initGraph() {
             id: node.id, 
             type: node.node_type,
             body: node.body,
-            tags: node.tags || []
+            tags: node.tags || [],
+            deps: Array.isArray(node.deps) ? node.deps : []
         }));
 
         const validNodeIds = new Set(nodes.map(n => n.id));
@@ -360,7 +361,8 @@ async function initGraph() {
                     nodes.push({ 
                         id: dependency, 
                         type: "ghost", 
-                        isGhost: true 
+                        isGhost: true,
+                        deps: []
                     });
                     validNodeIds.add(dependency);
                 }

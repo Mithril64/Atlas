@@ -366,6 +366,27 @@ pre {
     padding-left: 0;
 }
 
+.dep-link {
+    background: #44475a;
+    color: #f8f8f2;
+    border: 1px solid #6272a4;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.15s ease;
+}
+
+.dep-link:hover {
+    background: #6272a4;
+    border-color: #8be9fd;
+    color: #f8f8f2;
+}
+
+.dep-link:active {
+    transform: translateY(1px);
+}
+
 /* --- Clean up from previous edits --- */
 #panel-actions {
     margin-bottom: 20px;

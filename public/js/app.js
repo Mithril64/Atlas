@@ -105,14 +105,13 @@ const UIController = {
     },
 
     open(node) {
-        this.currentNode = node; 
+    this.currentNode = node; 
         
         this.badge.textContent = node.type;
         this.badge.style.backgroundColor = typeColors[node.type] || '#6272a4';
         this.idDisplay.textContent = node.id;
         
-        const cleanName = node.id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
-        this.title.textContent = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+    this.title.textContent = displayNameFromId(node.id);
 
         this.tabBtns.forEach(b => b.classList.remove('active'));
         this.tabPanes.forEach(p => p.classList.remove('active'));
@@ -123,9 +122,20 @@ const UIController = {
 
         this.depsListDisplay.innerHTML = '';
         if (node.deps && node.deps.length > 0) {
-            node.deps.forEach(dep => {
+            node.deps.forEach(depId => {
+                const target = nodesById.get(depId);
+                const label = target ? displayNameFromId(target.id) : displayNameFromId(depId) || depId;
                 const li = document.createElement('li');
-                li.textContent = dep;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'dep-link';
+                btn.textContent = label;
+                btn.title = depId;
+                btn.addEventListener('click', () => {
+                    const toOpen = nodesById.get(depId) || { id: depId, type: 'ghost', isGhost: true, deps: [] };
+                    UIController.open(toOpen);
+                });
+                li.appendChild(btn);
                 this.depsListDisplay.appendChild(li);
             });
         } else {
@@ -308,6 +318,13 @@ function animateOpacity() {
 
 const API_BASE = (window.ATLAS_API_URL || '').replace(/\/$/, '');
 const LINK_BASE = (window.ATLAS_LINK_BASE || API_BASE || window.location.origin).replace(/\/$/, '');
+const nodesById = new Map();
+
+function displayNameFromId(id) {
+    if (!id) return '';
+    const stripped = id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
+    return stripped.charAt(0).toUpperCase() + stripped.slice(1);
+}
 
 async function fetchGraphJson() {
     const endpoints = [];
@@ -348,7 +365,8 @@ async function initGraph() {
             type: node.node_type,
             body: node.body,
             tags: node.tags || [],
-            deps: Array.isArray(node.deps) ? node.deps : []
+            deps: Array.isArray(node.deps) ? node.deps : [],
+            isGhost: false
         }));
 
         const validNodeIds = new Set(nodes.map(n => n.id));
@@ -370,6 +388,8 @@ async function initGraph() {
                 links.push({ source: node.id, target: dependency });
             });
         });
+
+        nodes.forEach(n => nodesById.set(n.id, n));
 
         const elem = document.getElementById('graph-container');
 

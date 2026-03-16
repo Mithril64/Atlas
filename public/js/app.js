@@ -234,6 +234,7 @@ let searchResults = null;
 let currentSelectedIndex = -1;
 const commandOverlay = document.getElementById('command-overlay');
 const commandPanel = document.getElementById('command-panel');
+let searchDebounceId = null;
 
 // ─── Typst fallback renderer (lazy-loaded, used if SVG fetch fails) ───────────
 let typstPromise = null;
@@ -346,6 +347,122 @@ function displayNameFromId(id) {
     if (!id) return '';
     const stripped = id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
     return stripped.charAt(0).toUpperCase() + stripped.slice(1);
+}
+
+function processSearchQuery(query) {
+    if (!searchInput || !searchResults || !Graph) return;
+    searchResults.innerHTML = '';
+    currentSelectedIndex = -1; 
+    searchFilteredNodes.clear();
+
+    if (!query) {
+        searchResults.classList.remove('visible');
+        Graph.nodeColor(Graph.nodeColor());
+        return;
+    }
+
+    const currentNodes = Graph.graphData().nodes;
+
+    // --- COMMAND PARSER ---
+    if (query.startsWith('type:')) {
+        const typeQuery = query.split(':')[1].trim();
+        if (typeQuery) {
+            currentNodes.forEach(n => {
+                if (n.type.toLowerCase().includes(typeQuery)) searchFilteredNodes.add(n.id);
+            });
+            Graph.nodeColor(Graph.nodeColor());
+        }
+        searchResults.classList.remove('visible');
+        return; 
+    }
+
+    if (query.startsWith('tag:')) {
+        const tagQuery = query.split(':')[1].trim();
+        if (tagQuery) {
+            currentNodes.forEach(n => {
+                if (n.tags && n.tags.some(t => t.toLowerCase().includes(tagQuery))) {
+                    searchFilteredNodes.add(n.id);
+                }
+            });
+            Graph.nodeColor(Graph.nodeColor());
+        }
+        searchResults.classList.remove('visible');
+        return;
+    }
+
+    if (query.startsWith('deps:')) {
+        const targetQuery = query.split(':')[1].trim();
+        if (targetQuery) {
+            const startNode = currentNodes.find(n => n.id.toLowerCase().includes(targetQuery));
+            
+            if (startNode) {
+                const queue = [startNode.id];
+                
+                while (queue.length > 0) {
+                    const currentId = queue.shift();
+                    
+                    if (!searchFilteredNodes.has(currentId)) {
+                        searchFilteredNodes.add(currentId);
+                        
+                        const nodeObj = currentNodes.find(n => n.id === currentId);
+                        if (nodeObj && nodeObj.deps) {
+                            nodeObj.deps.forEach(dep => queue.push(dep));
+                        }
+                    }
+                }
+            }
+            Graph.nodeColor(Graph.nodeColor());
+        }
+        searchResults.classList.remove('visible');
+        return; 
+    }
+
+    // --- STANDARD SEARCH (Dropdown) ---
+    const matches = currentNodes.filter(n => {
+        const cleanName = n.id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
+        return n.id.toLowerCase().includes(query) || cleanName.toLowerCase().includes(query);
+    }).slice(0, 8); 
+
+    if (matches.length > 0) {
+        searchResults.classList.add('visible');
+        
+        matches.forEach((node, index) => {
+            const li = document.createElement('li');
+            const cleanName = node.id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
+            const typeClass = typeColors[node.type] ? node.type : 'default';
+            
+            li.innerHTML = `
+                <span>${cleanName.charAt(0).toUpperCase() + cleanName.slice(1)}</span>
+                <span class="search-match-type match-type-${typeClass}">${node.type}</span>
+            `;
+            
+            li.addEventListener('click', () => {
+                const targetZoom = 6;
+                const transitionTime = 800;
+                Graph.zoom(targetZoom, transitionTime);
+                
+                const screenShiftX = window.innerWidth / 4; 
+                const canvasShiftX = screenShiftX / targetZoom;
+                Graph.centerAt(node.x + canvasShiftX, node.y, transitionTime);
+                
+                UIController.open(node);
+
+                closeCommandPalette();
+                
+                searchInput.value = '';
+                searchResults.classList.remove('visible');
+                currentSelectedIndex = -1;
+                
+                // Clear filters if someone clicked a result
+                searchFilteredNodes.clear();
+                Graph.nodeColor(Graph.nodeColor());
+            });
+            
+            searchResults.appendChild(li);
+        });
+    } else {
+        searchResults.classList.remove('visible');
+    }
 }
 
 function openCommandPalette() {
@@ -523,118 +640,10 @@ async function initGraph() {
     if (searchInput && searchResults) {
             searchInput.addEventListener('input', (e) => {
                 const query = e.target.value.toLowerCase().trim();
-                searchResults.innerHTML = '';
-        currentSelectedIndex = -1; 
-                searchFilteredNodes.clear(); // Reset visual filters on every keystroke
-
-                if (!query) {
-                    searchResults.classList.remove('visible');
-                    Graph.nodeColor(Graph.nodeColor()); // Force re-render to restore colors
-                    return;
-                }
-
-                const currentNodes = Graph.graphData().nodes;
-
-                // --- COMMAND PARSER ---
-                if (query.startsWith('type:')) {
-                    const typeQuery = query.split(':')[1].trim();
-                    if (typeQuery) {
-                        currentNodes.forEach(n => {
-                            if (n.type.toLowerCase().includes(typeQuery)) searchFilteredNodes.add(n.id);
-                        });
-                        Graph.nodeColor(Graph.nodeColor()); // Force WebGL update
-                    }
-                    searchResults.classList.remove('visible'); // Hide dropdown
-                    return; 
-                }
-
-                if (query.startsWith('tag:')) {
-                    const tagQuery = query.split(':')[1].trim();
-                    if (tagQuery) {
-                        currentNodes.forEach(n => {
-                            if (n.tags && n.tags.some(t => t.toLowerCase().includes(tagQuery))) {
-                                searchFilteredNodes.add(n.id);
-                            }
-                        });
-                        Graph.nodeColor(Graph.nodeColor()); // Force WebGL update
-                    }
-                    searchResults.classList.remove('visible'); // Hide dropdown
-                    return;
-                }
-
-                if (query.startsWith('deps:')) {
-                    const targetQuery = query.split(':')[1].trim();
-                    if (targetQuery) {
-                        const startNode = currentNodes.find(n => n.id.toLowerCase().includes(targetQuery));
-                        
-                        if (startNode) {
-                            const queue = [startNode.id];
-                            
-                            while (queue.length > 0) {
-                                const currentId = queue.shift();
-                                
-                                if (!searchFilteredNodes.has(currentId)) {
-                                    searchFilteredNodes.add(currentId);
-                                    
-                                    const nodeObj = currentNodes.find(n => n.id === currentId);
-                                    if (nodeObj && nodeObj.deps) {
-                                        nodeObj.deps.forEach(dep => queue.push(dep));
-                                    }
-                                }
-                            }
-                        }
-                        Graph.nodeColor(Graph.nodeColor()); // Force WebGL update
-                    }
-                    searchResults.classList.remove('visible'); 
-                    return; 
-                }
-
-                // --- STANDARD SEARCH (Dropdown) ---
-                const matches = currentNodes.filter(n => {
-                    const cleanName = n.id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
-                    return n.id.toLowerCase().includes(query) || cleanName.toLowerCase().includes(query);
-                }).slice(0, 8); 
-
-                if (matches.length > 0) {
-                    searchResults.classList.add('visible');
-                    
-                    matches.forEach((node, index) => {
-                        const li = document.createElement('li');
-                        const cleanName = node.id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
-                        const typeClass = typeColors[node.type] ? node.type : 'default';
-                        
-                        li.innerHTML = `
-                            <span>${cleanName.charAt(0).toUpperCase() + cleanName.slice(1)}</span>
-                            <span class="search-match-type match-type-${typeClass}">${node.type}</span>
-                        `;
-                        
-                        li.addEventListener('click', () => {
-                            const targetZoom = 6;
-                            const transitionTime = 800;
-                            Graph.zoom(targetZoom, transitionTime);
-                            
-                            const screenShiftX = window.innerWidth / 4; 
-                            const canvasShiftX = screenShiftX / targetZoom;
-                            Graph.centerAt(node.x + canvasShiftX, node.y, transitionTime);
-                            
-                            UIController.open(node);
-
-                            closeCommandPalette();
-                            
-                            searchInput.value = '';
-                            searchResults.classList.remove('visible');
-                            currentSelectedIndex = -1;
-                            
-                            // Clear filters if someone clicked a result
-                            searchFilteredNodes.clear();
-                            Graph.nodeColor(Graph.nodeColor());
-                        });
-                        
-                        searchResults.appendChild(li);
-                    });
-                } else {
-                    searchResults.classList.remove('visible');
-                }
+                if (searchDebounceId) clearTimeout(searchDebounceId);
+                searchDebounceId = setTimeout(() => {
+                    processSearchQuery(query);
+                }, 80);
             });
 
             // Handle Keyboard Navigation

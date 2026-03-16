@@ -229,6 +229,11 @@ let currentDimAlpha = 1.0;
 let targetDimAlpha = 1.0;
 let animationFrameId = null;
 let Graph; 
+let searchInput = null;
+let searchResults = null;
+let currentSelectedIndex = -1;
+const commandOverlay = document.getElementById('command-overlay');
+const commandPanel = document.getElementById('command-panel');
 
 // ─── Typst fallback renderer (lazy-loaded, used if SVG fetch fails) ───────────
 let typstPromise = null;
@@ -335,11 +340,37 @@ const API_BASE = (window.ATLAS_API_URL || '').replace(/\/$/, '');
 const LINK_BASE = (window.ATLAS_LINK_BASE || API_BASE || window.location.origin).replace(/\/$/, '');
 const nodesById = new Map();
 let recenterOnNextOpen = null;
+let commandPaletteOpen = false;
 
 function displayNameFromId(id) {
     if (!id) return '';
     const stripped = id.replace(/^(thm|def|ax|lem)-/, '').replace(/-/g, ' ');
     return stripped.charAt(0).toUpperCase() + stripped.slice(1);
+}
+
+function openCommandPalette() {
+    if (!commandOverlay) return;
+    commandPaletteOpen = true;
+    commandOverlay.classList.add('open');
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.focus({ preventScroll: true });
+    }
+    if (searchResults) {
+        searchResults.innerHTML = '';
+        searchResults.classList.remove('visible');
+    }
+    currentSelectedIndex = -1;
+    searchFilteredNodes.clear();
+    if (Graph) Graph.nodeColor(Graph.nodeColor());
+}
+
+function closeCommandPalette() {
+    if (!commandOverlay) return;
+    commandPaletteOpen = false;
+    commandOverlay.classList.remove('open');
+    if (searchResults) searchResults.classList.remove('visible');
+    currentSelectedIndex = -1;
 }
 
 async function fetchGraphJson() {
@@ -486,16 +517,14 @@ async function initGraph() {
             });
 
         // --- Search Engine Logic ---
-        const searchInput = document.getElementById('search-input');
-        const searchResults = document.getElementById('search-results');
+    searchInput = document.getElementById('search-input');
+    searchResults = document.getElementById('search-results');
         
-        let currentSelectedIndex = -1; 
-
-        if (searchInput && searchResults) {
+    if (searchInput && searchResults) {
             searchInput.addEventListener('input', (e) => {
                 const query = e.target.value.toLowerCase().trim();
                 searchResults.innerHTML = '';
-                currentSelectedIndex = -1; 
+        currentSelectedIndex = -1; 
                 searchFilteredNodes.clear(); // Reset visual filters on every keystroke
 
                 if (!query) {
@@ -589,6 +618,8 @@ async function initGraph() {
                             Graph.centerAt(node.x + canvasShiftX, node.y, transitionTime);
                             
                             UIController.open(node);
+
+                            closeCommandPalette();
                             
                             searchInput.value = '';
                             searchResults.classList.remove('visible');
@@ -645,6 +676,10 @@ async function initGraph() {
 
             // Hide dropdown if clicked outside
             document.addEventListener('click', (e) => {
+                if (commandOverlay && commandOverlay.classList.contains('open') && e.target === commandOverlay) {
+                    closeCommandPalette();
+                    return;
+                }
                 if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
                     searchResults.classList.remove('visible');
                     currentSelectedIndex = -1;
@@ -659,3 +694,13 @@ async function initGraph() {
 
 setupAuth('btn-login-github', 'auth-status');
 initGraph();
+
+document.addEventListener('keydown', (e) => {
+    if (!commandPaletteOpen && e.key === ':' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        openCommandPalette();
+    } else if (commandPaletteOpen && e.key === 'Escape') {
+        e.preventDefault();
+        closeCommandPalette();
+    }
+});

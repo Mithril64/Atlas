@@ -449,17 +449,40 @@ function processSearchQuery(query) {
     }
 
     // --- IDE COMMAND ---
-    if (query.startsWith('ide ') || query.startsWith(':ide')) {
-        const parts = query.split(/\s+/);
-        const targetTerm = parts.slice(1).join(' ').trim();
-        if (targetTerm) {
-            const match = findNodeByFuzzyId(currentNodes, targetTerm);
-            if (match) {
-                openInIDE(match);
-                closeCommandPalette();
-            }
+    // --- IDE COMMAND (fuzzy list, no auto-open) ---
+    if (query.startsWith('ide') || query.startsWith(':ide')) {
+        const parts = query.replace(/^:?ide\s*/, '');
+        const term = parts.trim();
+
+        const matches = currentNodes
+            .filter(n => {
+                const clean = displayNameFromId(n.id).toLowerCase();
+                return !term || n.id.toLowerCase().includes(term) || clean.includes(term);
+            })
+            .slice(0, 8);
+
+        if (matches.length > 0) {
+            searchResults.classList.add('visible');
+            matches.forEach(node => {
+                const li = document.createElement('li');
+                const cleanName = displayNameFromId(node.id);
+                const typeClass = typeColors[node.type] ? node.type : 'default';
+                li.innerHTML = `
+                    <span>${cleanName}</span>
+                    <span class="search-match-type match-type-${typeClass}">IDE</span>
+                `;
+                li.addEventListener('click', () => {
+                    openInIDE(node);
+                    closeCommandPalette();
+                    searchInput.value = '';
+                    searchResults.classList.remove('visible');
+                    currentSelectedIndex = -1;
+                });
+                searchResults.appendChild(li);
+            });
+        } else {
+            searchResults.classList.remove('visible');
         }
-        searchResults.classList.remove('visible');
         return;
     }
 

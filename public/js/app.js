@@ -258,7 +258,9 @@ async function renderTypstFallback(node) {
         }
 
         const body = node.body || '';
-        const wrapped = `#set page(width: 500pt, height: auto, margin: 10pt, fill: rgb(\"#282a36\"))\n#set text(fill: rgb(\"#f8f8f2\"), size: 14pt)\n\n${mathGraphTypCache}\n\n${body}`;
+        const renderedBody = body.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, id, text) => `#link(\"${LINK_BASE}/#${id}\")[${text || id}]`);
+
+        const wrapped = `#set page(width: 500pt, height: auto, margin: 10pt, fill: rgb(\"#282a36\"))\n#set text(fill: rgb(\"#f8f8f2\"), size: 14pt)\n\n${mathGraphTypCache}\n\n${renderedBody}`;
         const svg = await typstInstance.svg({ mainContent: wrapped });
         UIController.mathImage.style.display = 'none';
         UIController.placeholder.style.display = 'block';
@@ -278,7 +280,9 @@ async function renderTypstPdf(node) {
         mathGraphTypCache = res.ok ? await res.text() : '';
     }
     const body = node.body || '';
-    const wrapped = `#set page(width: 595pt, height: auto, margin: (x: 56pt, y: 48pt), fill: rgb(\"#282a36\"))\n#set text(fill: rgb(\"#f8f8f2\"), size: 12pt)\n\n${mathGraphTypCache}\n\n${body}`;
+    const renderedBody = body.replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_, id, text) => `#link(\"${LINK_BASE}/#${id}\")[${text || id}]`);
+
+    const wrapped = `#set page(width: 595pt, height: auto, margin: (x: 56pt, y: 48pt), fill: rgb(\"#282a36\"))\n#set text(fill: rgb(\"#f8f8f2\"), size: 12pt)\n\n${mathGraphTypCache}\n\n${renderedBody}`;
     const pdfBytes = await typstInstance.pdf({ mainContent: wrapped });
     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
     return URL.createObjectURL(blob);
@@ -303,6 +307,7 @@ function animateOpacity() {
 }
 
 const API_BASE = (window.ATLAS_API_URL || '').replace(/\/$/, '');
+const LINK_BASE = (window.ATLAS_LINK_BASE || API_BASE || window.location.origin).replace(/\/$/, '');
 
 async function fetchGraphJson() {
     const endpoints = [];

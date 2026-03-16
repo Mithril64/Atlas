@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -17,6 +18,7 @@ use tower_http::services::ServeDir;
 use std::env;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
+use regex::Regex;
 use math_graph_compiler::ingest_submission;
 
 mod auth;
@@ -41,6 +43,69 @@ fn repo_root() -> PathBuf {
         .join("..")
         .canonicalize()
         .unwrap_or_else(|_| Path::new(env!("CARGO_MANIFEST_DIR")).join(".."))
+}
+
+fn render_wikilinks(body: &str, base: &str) -> String {
+    let re = Regex::new(r"\[\[([^\]|]+)(?:\|([^\]]+))?\]\]").unwrap();
+    re.replace_all(body, |caps: &regex::Captures| {
+        let id = caps.get(1).map(|m| m.as_str().trim()).unwrap_or("");
+        let text = caps.get(2).map(|m| m.as_str().trim()).filter(|s| !s.is_empty()).unwrap_or(id);
+        format!("#link(\"{}/#{}\")[{}]", base.trim_end_matches('/'), id, text)
+    }).into_owned()
+}
+
+fn extract_proof_blocks(body: &str) -> Vec<String> {
+    let mut blocks = Vec::new();
+    let mut i = 0usize;
+    while let Some(rel) = body[i..].find("#proof[") {
+        let open = i + rel;
+        let mut depth = 0usize;
+        let mut start_idx = None;
+        let mut end_idx = None;
+
+        for (offset, ch) in body[open..].char_indices() {
+            let idx = open + offset;
+            match ch {
+                '[' => {
+                    depth += 1;
+                    if depth == 1 {
+                        start_idx = Some(idx + 1);
+                    }
+                }
+                ']' => {
+                    if depth > 0 {
+                        depth -= 1;
+                        if depth == 0 {
+                            end_idx = Some(idx);
+                            break;
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        if let (Some(start), Some(end)) = (start_idx, end_idx) {
+            blocks.push(body[start..end].to_string());
+            i = end + 1;
+        } else {
+            break;
+        }
+    }
+    blocks
+}
+
+fn extract_wikilink_ids(text: &str) -> Vec<String> {
+    let re = Regex::new(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]").unwrap();
+    let mut set = HashSet::new();
+    for cap in re.captures_iter(text) {
+        if let Some(id) = cap.get(1).map(|m| m.as_str().trim()) {
+            if !id.is_empty() {
+                set.insert(id.to_string());
+            }
+        }
+    }
+    set.into_iter().collect()
 }
 
 fn extract_full_text(node: &SyntaxNode) -> String {
@@ -524,9 +589,22 @@ fn ensure_compiled_assets() {
 fn compile_all() {
     let root = repo_root();
     let tmp_dir = root.clone();
+    let link_base = env::var("ATLAS_LINK_BASE").unwrap_or_else(|_| "https://atlasmath.org".to_string());
 
     let mut all_nodes = Vec::new();
     process_directory(&root.join("math"), &mut all_nodes);
+
+    // Auto-add wikilink targets inside proof blocks to dependency lists
+    for node in all_nodes.iter_mut() {
+        let mut deps_set: HashSet<String> = node.deps.iter().cloned().collect();
+        for block in extract_proof_blocks(&node.body) {
+            for id in extract_wikilink_ids(&block) {
+                if deps_set.insert(id.clone()) {
+                    node.deps.push(id);
+                }
+            }
+        }
+    }
 
     let graph_path = root.join("public/json/graph.json");
     fs::create_dir_all(graph_path.parent().unwrap()).unwrap();
@@ -543,9 +621,11 @@ fn compile_all() {
     for node in all_nodes {
         if node.body.is_empty() { continue; }
         
+        let rendered_body = render_wikilinks(&node.body, &link_base);
+
         let svg_content = format!(
             "#import \"public/math-graph.typ\": *\n#set page(width: 500pt, height: auto, margin: 10pt, fill: none)\n#set text(fill: rgb(\"f8f8f2\"), size: 14pt)\n\n{}",
-            node.body
+            rendered_body
         );
         let temp_svg = tmp_dir.join(format!(".temp_{}.typ", node.id));
         fs::write(&temp_svg, &svg_content).unwrap();
@@ -574,7 +654,7 @@ fn compile_all() {
 
         let pdf_content = format!(
             "#import \"public/math-graph.typ\": *\n#set page(width: 595pt, height: auto, margin: (x: 56pt, y: 48pt), fill: rgb(\"#282a36\"))\n#set text(fill: rgb(\"#f8f8f2\"), size: 12pt)\n\n{}",
-            node.body
+            rendered_body
         );
         let temp_pdf = tmp_dir.join(format!(".temp_pdf_{}.typ", node.id));
         fs::write(&temp_pdf, &pdf_content).unwrap();

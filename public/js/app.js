@@ -592,23 +592,24 @@ function buildIdeTemplate(node) {
         return 'theorem';
     })();
 
-    const depsLine = deps.length ? deps.join(', ') : '';
+        const depsLine = deps.length ? deps.join(', ') : '';
+        const tagsLine = Array.isArray(node?.tags) && node.tags.length ? node.tags.join(', ') : 'tag';
 
-    return `// id: ${id}
+        return `// id: ${id}
 // type: ${typeGuess}
 // deps: [${depsLine}]
-// tags: [tag]
+// tags: [${tagsLine}]
 ---
 #statement[
-  Describe the statement of ${id} here.
+    Describe the statement of ${id} here.
 ]
 
 #intuition[
-  Give a short intuition or context.
+    Give a short intuition or context.
 ]
 
 #proof[
-  Sketch or provide the full proof.
+    Sketch or provide the full proof.
 ]
 `;
 }

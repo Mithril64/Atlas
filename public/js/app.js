@@ -133,6 +133,7 @@ const UIController = {
                 btn.title = depId;
                 btn.addEventListener('click', () => {
                     const toOpen = nodesById.get(depId) || { id: depId, type: 'ghost', isGhost: true, deps: [] };
+                    recenterOnNextOpen = depId;
                     UIController.open(toOpen);
                 });
                 li.appendChild(btn);
@@ -193,6 +194,20 @@ const UIController = {
         }
 
         this.panel.classList.add('open');
+
+        // Recenter graph when opening via dependency click
+        if (recenterOnNextOpen && Graph) {
+            const target = nodesById.get(recenterOnNextOpen);
+            if (target && typeof target.x === 'number' && typeof target.y === 'number') {
+                const targetZoom = 6;
+                const transitionTime = 800;
+                Graph.zoom(targetZoom, transitionTime);
+                const screenShiftX = window.innerWidth / 4;
+                const canvasShiftX = screenShiftX / targetZoom;
+                Graph.centerAt(target.x + canvasShiftX, target.y, transitionTime);
+            }
+            recenterOnNextOpen = null;
+        }
     },
 
     close() {
@@ -319,6 +334,7 @@ function animateOpacity() {
 const API_BASE = (window.ATLAS_API_URL || '').replace(/\/$/, '');
 const LINK_BASE = (window.ATLAS_LINK_BASE || API_BASE || window.location.origin).replace(/\/$/, '');
 const nodesById = new Map();
+let recenterOnNextOpen = null;
 
 function displayNameFromId(id) {
     if (!id) return '';

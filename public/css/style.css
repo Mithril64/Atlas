@@ -367,24 +367,26 @@ pre {
 }
 
 .dep-link {
-    background: #44475a;
+    background: #3b3e52;
     color: #f8f8f2;
-    border: 1px solid #6272a4;
-    border-radius: 6px;
-    padding: 6px 10px;
+    border: 1px solid #51536b;
+    border-radius: 8px;
+    padding: 8px 12px;
     cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.15s ease;
+    font-size: 0.95rem;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
 }
 
 .dep-link:hover {
-    background: #6272a4;
+    background: #59618a;
     border-color: #8be9fd;
-    color: #f8f8f2;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.35);
 }
 
 .dep-link:active {
     transform: translateY(1px);
+    box-shadow: 0 3px 10px rgba(0,0,0,0.25);
 }
 
 /* --- Clean up from previous edits --- */

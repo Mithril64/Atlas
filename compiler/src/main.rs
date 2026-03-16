@@ -54,6 +54,97 @@ fn render_wikilinks(body: &str, base: &str) -> String {
     }).into_owned()
 }
 
+    fn fallback_extract_simple(src: &str) -> Option<MathNode> {
+        let kind_re = Regex::new(r"#(theorem|lemma|definition|axiom|intuition|proof)\s*\(").ok()?;
+        let kind_caps = kind_re.captures(src)?;
+        let node_type = kind_caps.get(1)?.as_str().to_string();
+        let kind_end = kind_caps.get(0)?.end();
+
+        let id = Regex::new("id:\\s*\\\"([^\\\"]+)\\\"").ok()?
+            .captures(src)
+            .and_then(|c| c.get(1))
+            .map(|m| m.as_str().to_string())
+            .unwrap_or_default();
+
+        let deps = Regex::new(r"deps:\s*\[([^\]]*)\]").ok()?
+            .captures(src)
+            .map(|c| c.get(1).map(|m| m.as_str()).unwrap_or(""))
+            .map(|inner| {
+                inner
+                    .split(',')
+                    .filter_map(|s| {
+                        let t = s.trim().trim_matches('"');
+                        if t.is_empty() { None } else { Some(t.to_string()) }
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
+        let tags = Regex::new(r"tags:\s*\[([^\]]*)\]").ok()?
+            .captures(src)
+            .map(|c| c.get(1).map(|m| m.as_str()).unwrap_or(""))
+            .map(|inner| {
+                inner
+                    .split(',')
+                    .filter_map(|s| {
+                        let t = s.trim().trim_matches('"');
+                        if t.is_empty() { None } else { Some(t.to_string()) }
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
+        // find end of argument list so we don't confuse deps/tags arrays for body
+        let mut paren_depth = 1usize; // we've seen the opening '(' in the macro
+        let mut args_end = None;
+        for (offset, ch) in src[kind_end..].char_indices() {
+            match ch {
+                '(' => paren_depth += 1,
+                ')' => {
+                    paren_depth -= 1;
+                    if paren_depth == 0 {
+                        args_end = Some(kind_end + offset + 1);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        let args_end_idx = args_end.unwrap_or(src.len());
+
+        // crude bracket matching to capture the first content block after the args
+        let after_args = &src[args_end_idx..];
+        let start_rel = after_args.find('[')?;
+        let mut depth = 0usize;
+        let mut end_rel = None;
+        for (i, ch) in after_args[start_rel..].char_indices() {
+            match ch {
+                '[' => depth += 1,
+                ']' => {
+                    if depth > 0 {
+                        depth -= 1;
+                        if depth == 0 {
+                            end_rel = Some(start_rel + i);
+                            break;
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        let body = end_rel
+            .and_then(|end| after_args.get(start_rel + 1..end))
+            .map(|s| s.trim().to_string())
+            .unwrap_or_default();
+
+        if id.is_empty() || body.is_empty() {
+            return None;
+        }
+
+        Some(MathNode { id, node_type, deps, tags, body })
+    }
+
 fn extract_proof_blocks(body: &str) -> Vec<String> {
     let mut blocks = Vec::new();
     let mut i = 0usize;
@@ -203,11 +294,22 @@ fn process_directory(dir: &Path, all_nodes: &mut Vec<MathNode>) {
                     let source_code = fs::read_to_string(&path).expect("Failed to read file.");
                     println!("  🔍 Scanning: {:?}", path.file_name().unwrap());
 
+                    let before = all_nodes.len();
+
                     // If ingestion fails (missing tags/deps), fall back to raw parsing
                     if let Ok((_, formatted, _)) = ingest_submission(&source_code) {
                         walk_tree(&parse(&formatted), all_nodes);
                     } else {
                         walk_tree(&parse(&source_code), all_nodes);
+                    }
+
+                    if all_nodes.len() == before {
+                        if let Some(node) = fallback_extract_simple(&source_code) {
+                            println!("    ↪︎ Fallback parsed {}", node.id);
+                            all_nodes.push(node);
+                        } else {
+                            println!("    ⚠️ No nodes extracted from {:?}", path.file_name().unwrap());
+                        }
                     }
                 }
             }
@@ -593,6 +695,11 @@ fn compile_all() {
 
     let mut all_nodes = Vec::new();
     process_directory(&root.join("math"), &mut all_nodes);
+
+    println!("Discovered {} nodes", all_nodes.len());
+    for n in &all_nodes {
+        println!("  • {} (type: {}, body_len: {})", n.id, n.node_type, n.body.len());
+    }
 
     // Auto-add wikilink targets inside proof blocks to dependency lists
     for node in all_nodes.iter_mut() {

@@ -7,6 +7,7 @@ public/compiled/
 # 2. Rust & Compiler (Cargo)
 # =========================
 compiler/target/
+compiler/out.txt
 
 # =========================
 # 3. Frontend & Node (Future-proofing)

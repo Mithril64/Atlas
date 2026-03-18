@@ -210,7 +210,6 @@ fn extract_full_text(node: &SyntaxNode) -> String {
     result
 }
 
-// Robust AST Walker
 fn walk_tree(node: &SyntaxNode, extracted_nodes: &mut Vec<MathNode>) {
     if node.kind() == SyntaxKind::FuncCall {
         let mut is_math_node = false;
@@ -234,7 +233,6 @@ fn walk_tree(node: &SyntaxNode, extracted_nodes: &mut Vec<MathNode>) {
 
             // 2. Extract Metadata and Body
             if is_math_node {
-                // Check inside Args (...)
                 if child.kind() == SyntaxKind::Args {
                     for arg in child.children() {
                         if arg.kind() == SyntaxKind::Named {
@@ -292,7 +290,7 @@ fn process_directory(dir: &Path, all_nodes: &mut Vec<MathNode>) {
                     process_directory(&path, all_nodes);
                 } else if path.extension().and_then(|s| s.to_str()) == Some("typ") {
                     let source_code = fs::read_to_string(&path).expect("Failed to read file.");
-                    println!("  🔍 Scanning: {:?}", path.file_name().unwrap());
+                    println!("  Scanning: {:?}", path.file_name().unwrap());
 
                     let before = all_nodes.len();
 
@@ -305,10 +303,10 @@ fn process_directory(dir: &Path, all_nodes: &mut Vec<MathNode>) {
 
                     if all_nodes.len() == before {
                         if let Some(node) = fallback_extract_simple(&source_code) {
-                            println!("    ↪︎ Fallback parsed {}", node.id);
+                            println!("    Fallback parsed {}", node.id);
                             all_nodes.push(node);
                         } else {
-                            println!("    ⚠️ No nodes extracted from {:?}", path.file_name().unwrap());
+                            println!("    No nodes extracted from {:?}", path.file_name().unwrap());
                         }
                     }
                 }
@@ -362,6 +360,7 @@ fn main() {
     // If public config wasn't requested or failed to load, load local .env.
     // We don't load both because dotenv() does not overwrite existing vars,
     // so loading .env after .env.public would be safe but confusing if they mix.
+    // This is legacy
     if !public_loaded {
         let dotenv_file = std::env::var("DOTENV_FILE").unwrap_or_else(|_| ".env".to_string());
         if dotenv::from_filename(&dotenv_file).is_ok() {
@@ -476,7 +475,7 @@ async fn upload_handler(headers: axum::http::HeaderMap, mut multipart: Multipart
                         }
                     }
 
-                    let commit = Command::new("git").current_dir(repo_root()).args(["commit", "-m", &format!("atlas Submission: {}", id)]).output();
+                    let commit = Command::new("git").current_dir(repo_root()).args(["commit", "-m", &format!("Atlas Submission: {}", id)]).output();
                     match commit {
                         Ok(o) if o.status.success() => {}
                         Ok(o) => {
@@ -722,7 +721,7 @@ fn compile_all() {
     fs::create_dir_all(nodes_dir).unwrap();
 
     if all_nodes.is_empty() {
-        println!("  ⚠️ No nodes found! Check your .typ files for proper #theorem(...) formatting.");
+        println!("  No nodes found! Check your .typ files for proper #theorem(...) formatting.");
     }
 
     for node in all_nodes {
@@ -815,7 +814,6 @@ async fn create_github_pr(branch: &str, id: &str, user_token: Option<&str>) -> R
         let json: serde_json::Value = serde_json::from_str(&body).unwrap_or_default();
         Ok(json["html_url"].as_str().unwrap_or_default().to_string())
     } else {
-        // Try to extract a human-readable message from GitHub's JSON error body
         let msg = serde_json::from_str::<serde_json::Value>(&body)
             .ok()
             .and_then(|j| j["message"].as_str().map(|s| s.to_string()))

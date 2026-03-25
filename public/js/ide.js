@@ -13,7 +13,6 @@ let compileTimeout;
 let $typst = null;
 let mathSchemaCode = null;
 
-// auth.js is loaded as a separate <script> before this module — setupAuth/getAuthToken are globals
 setupAuth('btn-login-github', 'auth-status');
 
 function setStatus(message, className) {
@@ -319,12 +318,12 @@ btnPublish.addEventListener('click', async () => {
     // Validate: must have a metadata header with id and type before ---
     const headerMatch = content.match(/^([\s\S]*?)---/);
     if (!headerMatch) {
-        showIdeStatus('error', '⚠ Missing metadata header. Your file must start with <code>// id: ...</code> and <code>// type: ...</code> before the <code>---</code> separator.');
+        showIdeStatus('error', 'Missing metadata header. Your file must start with <code>// id: ...</code> and <code>// type: ...</code> before the <code>---</code> separator.');
         return;
     }
     const header = headerMatch[1];
     if (!header.includes('// id:') || !header.includes('// type:')) {
-        showIdeStatus('error', '⚠ Metadata header is incomplete. Both <code>// id: ...</code> and <code>// type: ...</code> are required before the <code>---</code> separator.');
+        showIdeStatus('error', 'Metadata header is incomplete. Both <code>// id: ...</code> and <code>// type: ...</code> are required before the <code>---</code> separator.');
         return;
     }
 
@@ -358,7 +357,7 @@ btnPublish.addEventListener('click', async () => {
             data = JSON.parse(rawText);
         } catch (e) {
             // Raw text error from the Rust backend
-            showIdeStatus('error', `⚠ ${rawText}`);
+            showIdeStatus('error', `${rawText}`);
             btnPublish.disabled = false;
             btnPublish.textContent = 'Publish to Atlas';
             return;
@@ -366,19 +365,19 @@ btnPublish.addEventListener('click', async () => {
 
         if (response.ok) {
             if (data.pr_url) {
-                showIdeStatus('success', `✓ Submitted successfully!<br><a href="${data.pr_url}" target="_blank" class="pr-link-btn">View Pull Request ↗</a>`);
+                showIdeStatus('success', `Submitted successfully!<br><a href="${data.pr_url}" target="_blank" class="pr-link-btn">View Pull Request ↗</a>`);
             } else {
-                showIdeStatus('success', `✓ ${data.message}`);
+                showIdeStatus('success', `${data.message}`);
             }
             btnPublish.textContent = 'Published!';
         } else {
-            showIdeStatus('error', `⚠ ${data.message || data.error || 'An unknown error occurred.'}`);
+            showIdeStatus('error', `${data.message || data.error || 'An unknown error occurred.'}`);
             btnPublish.disabled = false;
             btnPublish.textContent = 'Publish to Atlas';
         }
 
     } catch (err) {
-        showIdeStatus('error', `⚠ Network error: ${err.message}. Is the Atlas server running?`);
+        showIdeStatus('error', `Network error: ${err.message}. Is the Atlas server running?`);
         btnPublish.disabled = false;
         btnPublish.textContent = 'Publish to Atlas';
     }

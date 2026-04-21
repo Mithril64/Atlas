@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Atlas - Profile</title>
-    
+    <title>Atlas — Profile</title>
+
     <link rel="stylesheet" href="css/submit.css">
     <link rel="stylesheet" href="css/profile.css">
 </head>
@@ -12,27 +12,81 @@
     <nav class="top-nav">
         <a href="index.html" class="back-link">← Back to Atlas</a>
     </nav>
-    <div class="profile-page-container">
-        <div class="profile-page-header">
-            <img id="profile-page-avatar" src="" alt="Avatar">
-            <h2 id="profile-page-username">Loading...</h2>
+
+    <div class="profile-container">
+        <section class="identity-bar">
+            <img id="profile-page-avatar" class="identity-avatar" src="" alt="Avatar">
+            <div class="identity-meta">
+                <h1 id="profile-page-username" class="identity-name">Loading…</h1>
+                <div class="identity-sub">
+                    <span class="role-pill" id="profile-page-role">Contributor</span>
+                </div>
+            </div>
+            <button id="profile-page-logout" class="logout-btn">Log out</button>
+        </section>
+
+        <div class="profile-grid profile-grid--top">
+            <section class="card stats-card">
+                <header class="card-header">
+                    <h2>Activity</h2>
+                    <span class="card-header-meta">Lifetime totals</span>
+                </header>
+                <div class="stats-grid">
+                    <div class="stat">
+                        <span class="stat-value" id="profile-page-commits">0</span>
+                        <span class="stat-label">Commits</span>
+                        <span class="stat-hint">Merged pull requests</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value stat-value--review" id="profile-page-reviews">0</span>
+                        <span class="stat-label">Reviews</span>
+                        <span class="stat-hint">Pull requests reviewed</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value stat-value--trust" id="profile-page-trust">1</span>
+                        <span class="stat-label">Trust</span>
+                        <span class="stat-hint">Reputation level</span>
+                    </div>
+                    <div class="stat stat--placeholder" title="Coming with the reviewer portal">
+                        <span class="stat-value">—</span>
+                        <span class="stat-label">Queue</span>
+                        <span class="stat-hint">Pending reviews</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card badges-card">
+                <header class="card-header">
+                    <h2>Badges</h2>
+                    <span class="card-header-meta"><span id="badges-earned">0</span> earned</span>
+                </header>
+                <div class="badges-grid" id="badges-grid">
+                    <div class="badge badge--locked" title="Merge your first contribution">
+                        <div class="badge-glyph">◇</div>
+                        <div class="badge-name">First Steps</div>
+                    </div>
+                    <div class="badge badge--locked" title="Land 10 merged commits">
+                        <div class="badge-glyph">◇</div>
+                        <div class="badge-name">Builder</div>
+                    </div>
+                    <div class="badge badge--locked" title="Submit 5 reviews">
+                        <div class="badge-glyph">◇</div>
+                        <div class="badge-name">Reviewer</div>
+                    </div>
+                    <div class="badge badge--locked" title="Coming soon">
+                        <div class="badge-glyph">◇</div>
+                        <div class="badge-name">?</div>
+                    </div>
+                </div>
+                <p class="card-footer-note">Badges unlock as you contribute to Atlas.</p>
+            </section>
         </div>
-        <div class="profile-stats-grid">
-            <div class="stat-card">
-                <span class="stat-val" id="profile-page-commits">0</span>
-                <span class="stat-lbl">Commits</span>
-            </div>
-            <div class="stat-card">
-                <span class="stat-val" id="profile-page-reviews">0</span>
-                <span class="stat-lbl">Reviews</span>
-            </div>
-            <div class="stat-card">
-                <span class="stat-val trust" id="profile-page-trust">1</span>
-                <span class="stat-lbl">Trust</span>
-            </div>
-        </div>
-        <section class="contrib-section">
-            <h3 class="contrib-title">Contributions in the last year</h3>
+
+        <section class="card contrib-section">
+            <header class="card-header">
+                <h2>Contribution activity</h2>
+                <span class="card-header-meta">Last 12 months</span>
+            </header>
             <div id="contrib-graph" class="contrib-graph" aria-label="Contribution graph"></div>
             <div class="contrib-legend">
                 <span>Less</span>
@@ -44,7 +98,27 @@
                 <span>More</span>
             </div>
         </section>
-        <button id="profile-page-logout" class="logout-btn-large">Log Out</button>
+
+        <div class="profile-grid profile-grid--bottom">
+            <section class="card activity-card">
+                <header class="card-header">
+                    <h2>Recent contributions</h2>
+                    <span class="card-header-meta">Coming soon</span>
+                </header>
+                <div class="empty-state">
+                    <p>Your merged submissions will appear here once the feed is wired up.</p>
+                </div>
+            </section>
+            <section class="card activity-card">
+                <header class="card-header">
+                    <h2>Review queue</h2>
+                    <span class="card-header-meta">Reviewer portal</span>
+                </header>
+                <div class="empty-state">
+                    <p>Pull requests assigned for your review will show here.</p>
+                </div>
+            </section>
+        </div>
     </div>
 
     <script src="js/config.js"></script>

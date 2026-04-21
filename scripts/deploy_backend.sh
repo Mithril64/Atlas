@@ -90,10 +90,10 @@ if ! find "$REPO_DIR/public/nodes" -maxdepth 1 -type f \( -name '*.svg' -o -name
 	exit 1
 fi
 
-EXPECTED_NODES=$(python3 - <<'PY'
-import json
+EXPECTED_NODES=$(REPO_DIR="$REPO_DIR" python3 - <<'PY'
+import json, os
 from pathlib import Path
-p = Path("/root/Atlas/public/json/graph.json")
+p = Path(os.environ["REPO_DIR"]) / "public/json/graph.json"
 data = json.loads(p.read_text()) if p.exists() else []
 print(len(data) if isinstance(data, list) else 0)
 PY

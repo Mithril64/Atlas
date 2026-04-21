@@ -1,8 +1,8 @@
 # Atlas API Reference
 
 Base URL (local): `http://127.0.0.1:3000`  
-Base URL (public tunnel): `https://alva-keyed-unexplainably.ngrok-free.dev`  
-Configured in `public/js/config.js` via `window.ATLAS_API_URL`.
+Base URL (production): `https://api.atlasmath.org`  
+Configured at runtime in `public/js/config.js` via `window.ATLAS_API_URL`.
 
 ---
 
@@ -74,9 +74,9 @@ Initiates the GitHub OAuth flow. Redirects to GitHub's authorization page reques
 
 ## GET `/api/auth/callback`
 
-OAuth callback. Exchanges the authorization `code` for an access token, then returns a small HTML page that calls `window.opener.postMessage({ type: 'github-auth', token: '...' }, '*')` and closes the popup.
+OAuth callback. Exchanges the authorization `code` for an access token, upserts the user into `atlas.db`, then returns a small HTML page that calls `window.opener.postMessage({ type: 'github-auth', token: '...' }, '*')` and closes the popup.
 
-**Query parameters:** `code`, `state`  
+**Query parameters:** `code`  
 **Success:** Returns HTML that passes the token back to the opener and closes the window.  
 **Failure (bad code):** Posts `{ type: 'github-auth-error', error: '...' }`.  
 **Failure (missing env var):** Returns a human-readable config error page — does not panic.
@@ -87,7 +87,8 @@ OAuth callback. Exchanges the authorization `code` for an access token, then ret
 
 Fetches the authenticated user's profile statistics from the `atlas.db` SQLite database.
 
-**Header Required:** `Authorization: Bearer <token>`
+**Header required:** `Authorization: Bearer <token>`
+
 **Success `200`:**
 ```json
 {
@@ -103,6 +104,7 @@ Fetches the authenticated user's profile statistics from the `atlas.db` SQLite d
   ]
 }
 ```
+
 **Error `401`:**
 ```text
 Unauthorized
@@ -116,17 +118,17 @@ Consumes GitHub webhook events and updates profile metrics.
 
 **Headers:**
 - `X-GitHub-Event` (required)
-- `X-Hub-Signature-256` (required when `GITHUB_WEBHOOK_SECRET` is set)
+- `X-Hub-Signature-256` (required when `GITHUB_WEBHOOK_SECRET` is set; HMAC-SHA256 of the raw body)
 
 **Supported events:**
 - `pull_request` (`action=closed`, `merged=true`, `base.ref=main`) → increments `commits`
 - `pull_request_review` (`action=submitted`) → increments `reviews`
 
-Also writes daily contribution buckets in SQLite (`contributions` table), used by the profile heatmap.
+Both events write a daily contribution bucket to the `contributions` table used by the profile heatmap.
 
 **Success `200`:**
 ```json
-{"status":"ok","counted":true}
+{"status": "ok", "counted": true}
 ```
 
 ---
@@ -144,14 +146,14 @@ Development-only helper to replay webhook payloads locally without GitHub delive
 
 **Success `200`:**
 ```json
-{"status":"ok","counted":true,"dev":true}
+{"status": "ok", "counted": true, "dev": true}
 ```
 
 ---
 
 ## Notes
 
-- CORS is `CorsLayer::permissive()` — fine for local use; restrict for production.
-- Bind address is configurable: `SERVER_HOST` (default `127.0.0.1`), `SERVER_PORT` (default `3000`). `make server-public` sets `SERVER_HOST=0.0.0.0`.
+- CORS allows all origins and methods; permitted request headers include `Authorization`, `Content-Type`, and `ngrok-skip-browser-warning`.
+- Bind address: `SERVER_HOST` (default `127.0.0.1`), `SERVER_PORT` (default `3000`). `make server-public` sets `SERVER_HOST=0.0.0.0`.
 - Submissions with `tags: [demo]` skip the Git/PR pipeline entirely.
 - There is no rate limiting or file size limit currently implemented.

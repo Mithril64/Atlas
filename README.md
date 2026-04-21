@@ -76,15 +76,18 @@ For webhook delivery in production, use:
 | `make compile` | Compile `.typ` files → `graph.json` + SVG/PDF |
 | `make server` | API server on `127.0.0.1:3000` |
 | `make server-public` | API server on `0.0.0.0:3000` (tunnel/LAN) |
+| `make server-prod` | API server on `127.0.0.1:3000` with `.env.public` (behind reverse proxy) |
 | `make serve` | Frontend on `localhost:8000` |
 | `make tunnel` | ngrok tunnel with persistent static domain |
-| `make full` | First-time setup: build → compile → server |
+| `make tunnel-quick` | Temporary cloudflared tunnel (no account needed) |
+| `make dev` | Compile + watch for changes + serve frontend |
+| `make full` | First-time setup via `quickstart.sh` |
 
 ---
 
 ## Environment
 
-Copy `compiler/.env.example` to `compiler/.env` and fill in your values. The server picks it up automatically on startup.
+Create `compiler/.env` and fill in your values. The server picks it up automatically on startup.
 
 ```bash
 # GitHub OAuth App — "Atlas Dev" (local)
@@ -120,6 +123,7 @@ Submissions tagged `// tags: [demo]` skip the Git/PR step entirely (useful for t
 | Graph viewer | `index.html` | Browse the math graph |
 | Contributor portal | `submit.html` | Upload a `.typ` file |
 | IDE | `ide.html` | Write, preview, and publish Typst in-browser |
+| Profile | `profile.html` | View stats, badges, and contribution history |
 
 ---
 

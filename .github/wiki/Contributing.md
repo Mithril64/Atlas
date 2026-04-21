@@ -28,7 +28,7 @@ Every `.typ` file submitted to Atlas must have a metadata header, a `---` separa
 | Field | Required | Description |
 |-------|----------|-------------|
 | `// id:` | ✅ | Unique kebab-case identifier. Convention: `{type}-{name}`, e.g. `thm-bolzano-weierstrass`, `def-prime` |
-| `// type:` | ✅ | One of: `theorem`, `lemma`, `definition`, `axiom` |
+| `// type:` | ✅ | One of: `theorem`, `lemma`, `definition`, `axiom`, `intuition`, `proof` |
 | `// deps:` | Optional | Comma-separated list of node IDs this depends on, e.g. `[def-group, ax-choice]` |
 | `// tags:` | Optional | Determines which subfolder the file is saved in. First tag = folder name. Use `demo` to skip the PR pipeline during testing. |
 
@@ -37,7 +37,7 @@ Every `.typ` file submitted to Atlas must have a metadata header, a `---` separa
 Use these macros inside the `---` body:
 
 | Macro | Purpose |
-|-------|---------| 
+|-------|---------|
 | `#statement[...]` | The main claim |
 | `#intuition[...]` | Informal explanation |
 | `#proof[...]` | Formal proof |
@@ -45,6 +45,20 @@ Use these macros inside the `---` body:
 | `#remark[...]` | Side note |
 
 All blocks are styled with the Dracula dark theme — previews and downloaded PDFs will both use the dark background.
+
+## Wikilinks
+
+Inside any body block you can reference other nodes using Obsidian-style syntax:
+
+```typst
+#proof[
+  By [[def-group|the group axioms]] and [[thm-lagrange]]...
+]
+```
+
+`[[id]]` renders as a clickable link. `[[id|text]]` uses custom display text.
+
+Any node IDs referenced inside `#proof[...]` blocks are **automatically added to `deps`** during compilation — you do not need to list them manually in the header, though doing so is fine.
 
 ## Submitting
 

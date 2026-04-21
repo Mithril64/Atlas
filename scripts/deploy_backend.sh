@@ -58,16 +58,10 @@ else
 	echo "[deploy] WARNING: no .env or .env.public found in compiler/"
 fi
 
-echo "[deploy] Building backend release binary via Makefile..."
-make build-release
-
-echo "[deploy] Debug: newest backend artifacts after build-release:"
-find "$REPO_DIR/compiler/target/release" -maxdepth 1 -type f -printf '%TY-%Tm-%Td %TH:%TM:%TS %f\n' | sort | tail -n 5
-
 echo "[deploy] Debug: ensuring nodes directory exists"
 mkdir -p "$REPO_DIR/public/nodes"
 
-echo "[deploy] Compiling graph assets via Makefile (graph.json + nodes/*.svg/*.pdf)..."
+echo "[deploy] Building binary and compiling graph assets (graph.json + nodes/*.svg/*.pdf)..."
 DOTENV_FILE=.env.public make compile
 
 echo "[deploy] Debug: compile finished; summarizing outputs"

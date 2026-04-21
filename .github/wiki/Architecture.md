@@ -116,12 +116,9 @@ Submission branches are deleted automatically by `.github/workflows/cleanup-bran
 
 | File | Tests | Coverage |
 |------|-------|----------|
-| `ingest_submission.rs` | 4 | Node type variants (theorem, definition, axiom, lemma) |
-| `deps_and_tags.rs` | 10 | Deps/tags parsing, folder naming, quoting, normalisation |
-| `body_and_output.rs` | 8 | Body extraction, multiline, math symbols, output shape |
-| `errors.rs` | 8 | Missing fields, empty input, malformed input |
-| `wikilinks.rs` | 4 | Wikilink rendering, proof block extraction, deduplication |
-| `auth_endpoints.rs` | 1 | Profile endpoint rejects requests without `Authorization` header |
+| `ingest.rs` | 30 | Node type variants, deps/tags parsing, body extraction, output shape, error cases — grouped in `mod` blocks |
+| `parsing.rs` | 4 | Wikilink rendering, proof block extraction, ID deduplication, fallback parser |
+| `auth.rs` | 1 | Profile endpoint rejects requests without `Authorization` header |
 
 Run with `make test`.
 

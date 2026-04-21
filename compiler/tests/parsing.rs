@@ -14,7 +14,16 @@ fn wikilinks_render_basic_and_labeled() {
 }
 
 #[test]
-fn extract_proof_block_and_links() {
+fn wikilink_ids_deduplicated() {
+    let text = "[[a]] and [[a|A]] and [[b]]";
+    let ids = extract_wikilink_ids(text);
+    assert_eq!(ids.len(), 2);
+    assert!(ids.contains(&"a".to_string()));
+    assert!(ids.contains(&"b".to_string()));
+}
+
+#[test]
+fn proof_block_links_extracted() {
     let body = "#statement[hi]\n#proof[Use [[a-lem]] then [[b-lem|B]].]\n#intuition[ok]";
     let blocks = extract_proof_blocks(body);
     assert_eq!(blocks.len(), 1);
@@ -42,13 +51,4 @@ fn fallback_extracts_node_and_body() {
     assert!(node.tags.contains(&"algebra".to_string()));
     assert!(node.body.contains("Foo"));
     assert!(node.body.contains("Bar"));
-}
-
-#[test]
-fn wikilink_ids_are_deduped() {
-    let text = "[[a]] and [[a|A]] and [[b]]";
-    let ids = extract_wikilink_ids(text);
-    assert_eq!(ids.len(), 2);
-    assert!(ids.contains(&"a".to_string()));
-    assert!(ids.contains(&"b".to_string()));
 }
